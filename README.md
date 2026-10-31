@@ -10,7 +10,7 @@
 
 | 파일 | 설명 |
 |---|---|
-| [`apk/eorua8801_Drivescape_release.apk`](apk/eorua8801_Drivescape_release.apk) | release 빌드 (versionName 0.1.0) |
+| [`apk/Drivescape_Drivescape_release.apk`](apk/Drivescape_Drivescape_release.apk) | release 빌드 (versionName 0.1.0) |
 
 > 공모전 시연용으로 release 빌드를 Android 디버그 키로 서명했습니다. 정식 배포 시에는 별도 서명 키로 교체합니다.
 
@@ -24,7 +24,7 @@
 
 ### 2. 설치·실행
 ```bash
-adb install -r apk/eorua8801_Drivescape_release.apk
+adb install -r apk/Drivescape_Drivescape_release.apk
 ```
 런처(앱 목록)에서 **Drivescape**를 실행하고 **재생**을 누릅니다. 왼쪽 차량 미디어 위젯, 스티어링 휠 미디어 키(재생·일시정지·다음 세트)로도 조작할 수 있습니다.
 
