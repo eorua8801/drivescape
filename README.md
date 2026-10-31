@@ -10,7 +10,7 @@
 
 | 파일 | 설명 |
 |---|---|
-| [`apk/Drivescape_Drivescape_release.apk`](apk/Drivescape_Drivescape_release.apk) | release 빌드 (versionName 0.1.0) |
+| [`apk/Drivescape_Drivescape_release.apk`](apk/Drivescape_Drivescape_release.apk) | release 빌드 (versionName 0.2.0) |
 
 > 공모전 시연용으로 release 빌드를 Android 디버그 키로 서명했습니다. 정식 배포 시에는 별도 서명 키로 교체합니다.
 
@@ -43,18 +43,26 @@ powershell -ExecutionPolicy Bypass -File tools/demo_drive.ps1
 
 앱 안의 **데모 시나리오 재생**(정차 중에만 표시)은 차량 신호 대신 미리 정한 86초 대본으로 음악을 들려줍니다.
 
+### 5. 내비 연동 확인 (debug 빌드)
+에뮬레이터에서는 내비 경로를 Pleos 내비 앱에서 직접 설정하거나, debug 빌드의 테스트 훅으로 걸 수 있습니다. 에뮬레이터 차량은 실제로 움직이지 않으므로 도착은 `arrive`로 흉내 냅니다. (이 훅과 경로 설정 권한은 release APK에 포함되지 않습니다.)
+```bash
+adb shell am broadcast -a app.drivescape.DEBUG_NAVI -n app.drivescape/.debug.DebugNaviReceiver --es cmd route --ef lat 37.4131 --ef lon 127.0950 --es name test
+adb shell am broadcast -a app.drivescape.DEBUG_NAVI -n app.drivescape/.debug.DebugNaviReceiver --es cmd arrive
+```
+
 ## 테스트 환경
 
 | 항목 | 값 |
 |---|---|
 | 에뮬레이터 | Pleos Connect Emulator v2.1.0 (Android 14, API 34, x86_64) |
 | Pleos Vehicle SDK | `ai.pleos.playground:Vehicle:2.3.2` |
+| Pleos NaviHelper SDK | `ai.pleos.playground:NaviHelper:3.0.5` |
 | 빌드 | Android Studio 2025.3 내장 JDK 21, Gradle 8.14.3, AGP 8.13.0, Kotlin 2.2.10 |
 | SDK 버전 | minSdk 28 · compile/targetSdk 35 |
 | 카테고리 | Music/Audio (`android:appCategory="audio"`) |
 
 ### 필요한 설정·권한
-- Pleos 권한(Manifest 선언, 실행 중 승인 창 없음): `pleos.car.permission.CAR_WINDOWS`(와이퍼), `CAR_LIGHTS`(방향지시등), `CAR_DRIVE`(브레이크)
+- Pleos 권한(Manifest 선언, 실행 중 승인 창 없음): `pleos.car.permission.CAR_WINDOWS`(와이퍼), `CAR_LIGHTS`(방향지시등), `CAR_DRIVE`(브레이크), `NAVI_ROUTE`(남은 시간 조회)
 - AAOS 권한: `android.car.permission.CAR_SPEED`(속도, **첫 실행 시 승인 창**), `CAR_POWERTRAIN`(기어)
 - 지원하지 않는 신호가 있으면 해당 레이어만 꺼진 채로 동작하고, 화면의 신호 카드에 "미지원"으로 표시됩니다.
 
@@ -74,7 +82,16 @@ powershell -ExecutionPolicy Bypass -File tools/demo_drive.ps1
 | 방향지시등 | Pleos `TurnSignal` | 8분음표 틱톡, 켠 쪽으로 패닝 |
 | 브레이크 | Pleos `Brake` | 로우패스 18 kHz → 650 Hz, 하이햇·스네어 빠지고 리듬 축소 |
 | 시간대 | 시계 | 낮: D장조 (Dmaj7–Gmaj7–Bm7–A7) / 밤: D에올리안 (Dm7–B♭maj7–Fmaj7–C7) |
-| 도착까지 남은 시간 | (NaviHelper 연동 예정) | 5분 전부터 빌드업, 1분 전 클라이맥스, 도착 차임 |
+| 도착까지 남은 시간 | Pleos `NaviHelper` (경로 시작·주행 정보·도착 이벤트) | 5분 전부터 빌드업, 1분 전 클라이맥스, 도착 시 차임. 경로가 없으면 빌드업 없이 동작 |
+
+### 사운드 세트
+
+| 세트 | 템포 | 특징 |
+|---|---|---|
+| 기본 · 앰비언트 팝 | 74–110 BPM | 신스 패드, 7화음, 정박 리듬 (웹 프로토타입과 같은 소리) |
+| 로파이 · 느린 오후 | 66–88 BPM | 스윙, 재즈 9화음, 일렉트릭 피아노, LP 잡음, 따뜻한 테이프 톤 |
+
+세트는 `app/src/main/assets/sets/*.json` 데이터로 정의합니다(화성·템포·리듬 패턴 + `style`의 음색 설정). 재생 중 **다음 세트** 버튼이나 스티어링 휠 다음 키로 바꿉니다. 빗소리·와이퍼·깜빡이·브레이크 반응은 모든 세트에 공통입니다.
 
 화면은 차량 주야간 모드에 맞춰 밝은 테마/어두운 테마로 바뀌고, 주행 중(CarUxRestrictions)에는 재생·정지와 세트 넘기기만 남습니다.
 
@@ -82,7 +99,7 @@ powershell -ExecutionPolicy Bypass -File tools/demo_drive.ps1
 
 ```
 app/src/main/java/app/drivescape/
-├─ drive/     ① 차량 신호 수집: VehicleSignals(Pleos SDK + CarPropertyManager + CarUxRestrictions), DriveHub, Scenario
+├─ drive/     ① 차량 신호 수집: VehicleSignals(Pleos SDK + CarPropertyManager + CarUxRestrictions), NaviSignals(NaviHelper), DriveHub, Scenario
 ├─ music/     ② 음악 규칙 엔진: Composer(16분음표 단위 규칙), SoundSet(assets/sets/*.json 데이터)
 ├─ audio/     ③ 사운드 엔진: SynthEngine(시퀀서·믹스 체인), Instruments, Voice, Dsp — AudioTrack float 48 kHz
 ├─ playback/  ④ 미디어·안전: DrivescapeService(MediaBrowserService + MediaSession, 오디오 포커스), EnginePlayer
@@ -96,15 +113,14 @@ tools/demo_drive.ps1        Virtual Console 자동 시연·녹화 스크립트
 
 ## 검증
 
-- `app/src/test/.../OfflineRenderTest`: 86초 시나리오를 오프라인 렌더링해 `app/build/drivescape_scenario.wav`로 저장하고, NaN·클리핑·초별 음량을 검사합니다.
+- `app/src/test/.../OfflineRenderTest`: 86초 시나리오를 세트별로 오프라인 렌더링해 `app/build/drivescape_scenario.wav`, `drivescape_scenario_lofi.wav`로 저장하고, NaN·클리핑·초별 음량을 검사합니다. (평균 RMS: 기본 −11.3 dB, 로파이 −12.5 dB)
   ```bash
   ./gradlew testDebugUnitTest
   ```
 - 웹 프로토타입을 Chrome `OfflineAudioContext`로 렌더링한 결과와 비교해 초별 RMS 평균 차이 0.01 dB(최대 1 dB)로 맞췄습니다.
-- Pleos Connect Emulator에서 6개 신호(기어·속도·와이퍼·방향지시등·브레이크·주행 제한), 미디어 위젯, 미디어 키 동작을 확인했습니다.
+- Pleos Connect Emulator에서 6개 신호(기어·속도·와이퍼·방향지시등·브레이크·주행 제한), 미디어 위젯, 미디어 키, 세트 전환, 내비 경로의 남은 시간(빌드업)과 도착 차임을 확인했습니다.
 
 ## 남은 계획
 
-- 사운드 세트 추가 (로파이 · 시티팝 · 국악 퓨전 · 키즈)
-- NaviHelper 연동: 도착까지 남은 시간 → 빌드업·도착 피날레
-- SpeechToText 음성 명령, Devbox·실차 검증
+- 사운드 세트 추가 (시티팝 · 국악 퓨전 · 키즈)
+- SpeechToText 음성 명령, Devbox·실차 검증 (실제 주행 중 남은 시간 갱신 포함)

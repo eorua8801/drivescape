@@ -21,6 +21,8 @@ object DriveHub {
     @Volatile var wiperStatus = SignalStatus.WAITING; internal set
     @Volatile var turnStatus = SignalStatus.WAITING; internal set
     @Volatile var brakeStatus = SignalStatus.WAITING; internal set
+    /** 내비 연동: WAITING = 연결됨·경로 없음, LIVE = 경로 안내 중 */
+    @Volatile var naviStatus = SignalStatus.WAITING; internal set
 
     /** 주행 제한(CarUxRestrictions)으로 UI를 줄여야 하는지 */
     @Volatile var restricted = false; internal set
@@ -35,6 +37,7 @@ object DriveHub {
     val currentSet: SoundSet? get() = sets.getOrNull(setIndex)
 
     private var signals: VehicleSignals? = null
+    var navi: NaviSignals? = null; private set
 
     @Synchronized
     fun init(context: Context) {
@@ -42,6 +45,7 @@ object DriveHub {
         val app = context.applicationContext
         sets = SoundSet.loadAll(app)
         signals = VehicleSignals(app).also { it.start() }
+        navi = NaviSignals(app).also { it.start() }
     }
 
     /** 권한을 새로 받은 뒤 차량 속성 구독을 다시 시도한다. */

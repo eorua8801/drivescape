@@ -226,15 +226,15 @@ class MainActivity : Activity() {
     }
 
     private fun updateSignals(st: DriveState, lampLit: Boolean, arriving: Boolean) {
-        fun cell(key: String, value: String, status: SignalStatus?, active: Int? = null) {
+        fun cell(key: String, value: String, status: SignalStatus, active: Int? = null,
+                 liveLabel: String = "차량 신호", waitLabel: String = "대기") {
             val c = cells.getValue(key)
             setText(c.value, value)
             c.value.setTextColor(active ?: cInk)
             val (tagText, tagColor) = when {
-                status == null -> "내비" to cDim
                 DriveHub.scenario != null -> "시나리오" to cRain
-                status == SignalStatus.LIVE -> "차량 신호" to cOk
-                status == SignalStatus.WAITING -> "대기" to cDim
+                status == SignalStatus.LIVE -> liveLabel to cOk
+                status == SignalStatus.WAITING -> waitLabel to cDim
                 status == SignalStatus.UNSUPPORTED -> "미지원" to cDim
                 else -> "권한 없음" to cDim
             }
@@ -255,8 +255,9 @@ class MainActivity : Activity() {
             rem != null -> "%.1f분".format(rem)
             else -> "경로 없음"
         }
-        cell("arrive", remText, if (DriveHub.scenario != null) SignalStatus.LIVE else null,
-            if (rem != null && rem <= 5f) getColor(R.color.arp) else null)
+        cell("arrive", remText, DriveHub.naviStatus,
+            if (rem != null && rem <= 5f) getColor(R.color.arp) else null,
+            liveLabel = "내비 연동", waitLabel = "내비")
     }
 
     private fun setText(v: TextView, s: String) { if (v.text.toString() != s) v.text = s }

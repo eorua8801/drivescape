@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 디버그 빌드 전용: 에뮬레이터에서 내비 경로를 PC에서 걸어 보기 위한 테스트 훅. release APK에는 들어가지 않는다. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="pleos.car.permission.NAVI_ROUTE_SEARCH" />
+
+    <application>
+        <receiver
+            android:name=".debug.DebugNaviReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="app.drivescape.DEBUG_NAVI" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

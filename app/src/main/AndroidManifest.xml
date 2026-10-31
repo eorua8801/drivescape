@@ -9,6 +9,8 @@
     <uses-permission android:name="pleos.car.permission.CAR_WINDOWS" />  <!-- 와이퍼 -->
     <uses-permission android:name="pleos.car.permission.CAR_LIGHTS" />   <!-- 방향지시등 -->
     <uses-permission android:name="pleos.car.permission.CAR_DRIVE" />    <!-- 브레이크 페달 -->
+    <!-- Pleos NaviHelper SDK: 목적지까지 남은 시간 조회 (경로 설정 권한은 쓰지 않음) -->
+    <uses-permission android:name="pleos.car.permission.NAVI_ROUTE" />
 
     <!-- AAOS 표준 차량 속성: 속도(PERF_VEHICLE_SPEED), 기어(GEAR_SELECTION) -->
     <uses-permission android:name="android.car.permission.CAR_SPEED" />
