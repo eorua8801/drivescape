@@ -87,10 +87,18 @@ class Composer(private val inst: Instruments, private val emit: (UiEvent) -> Uni
         val t = if (s16 % 2 == 1 && style.swing > 0) stepStart + (style.swing * sec16 * SR).toLong() else stepStart
 
         if (style.padStyle == "epiano" && s16 != 0) {
-            // 일렉트릭 피아노 컴핑: 2박 뒤(6)와 4박 앞 꾸밈(11)에 같은 코드를 가볍게 다시 친다
             val tones = chordTones(chordDeg, curMode(st), style, 55, 74)
-            if (lv >= 1 && s16 == 6) inst.epiano(t, tones, if (st.brake) 0.35 else 0.55, sec16 * 6, 0.3)
-            if (lv >= 2 && s16 == 11 && !st.brake) inst.epiano(t, tones, 0.35, sec16 * 3, 0.3)
+            val steps = style.compSteps
+            if (steps == null) {
+                // 기본 컴핑: 2박 뒤(6)와 4박 앞 꾸밈(11)에 같은 코드를 가볍게 다시 친다
+                if (lv >= 1 && s16 == 6) inst.epiano(t, tones, if (st.brake) 0.35 else 0.55, sec16 * 6, 0.3)
+                if (lv >= 2 && s16 == 11 && !st.brake) inst.epiano(t, tones, 0.35, sec16 * 3, 0.3)
+            } else if (lv >= 1 && s16 in steps) {
+                // 세트가 정한 위치에 짧게 끊어 치는 컴핑. 저속에선 절반만, 브레이크 땐 약하게
+                if (lv >= 2 || s16 < 8) {
+                    inst.epiano(t, tones, style.compVel * (if (st.brake) 0.6 else 1.0), sec16 * style.compLen, 0.25)
+                }
+            }
         }
 
         if (s16 == 0) {

@@ -36,6 +36,14 @@ class SoundSet(
         val padGain: Double = 1.0,
         /** epiano 세트에서 밑에 깔 어두운 신스 패드의 크기 (0 = 없음). 마디 사이가 비지 않게 한다 */
         val bed: Double = 0.0,
+        /**
+         * epiano 컴핑 위치(16분음표). null이면 기본 컴핑(6번째 + 시내 이상에서 11번째).
+         * 예: [2, 6, 10, 14] = 매 8분 뒷박에 짧게 끊어 치는 펑키한 컴핑
+         */
+        val compSteps: IntArray? = null,
+        /** 컴핑 한 번의 길이(16분음표 단위)와 세기 */
+        val compLen: Double = 1.5,
+        val compVel: Double = 0.45,
         /** 홀수 16분음표를 16분음표 길이의 몇 배만큼 늦출지 (0 = 스윙 없음, 0.33 ≈ 셋잇단 느낌) */
         val swing: Double = 0.0,
         val kickFreq: Double = 150.0,
@@ -113,6 +121,8 @@ class SoundSet(
             return Style(
                 padStyle = str("padStyle", d.padStyle), padVoicing = voicing, padGain = num("padGain", d.padGain),
                 bed = num("bed", d.bed),
+                compSteps = j.optJSONArray("compSteps")?.let { a -> IntArray(a.length()) { a.getInt(it) } },
+                compLen = num("compLen", d.compLen), compVel = num("compVel", d.compVel),
                 swing = num("swing", d.swing),
                 kickFreq = num("kickFreq", d.kickFreq), kickEnd = num("kickEnd", d.kickEnd),
                 kickDecay = num("kickDecay", d.kickDecay), kickGain = num("kickGain", d.kickGain),

@@ -10,7 +10,7 @@
 
 | 파일 | 설명 |
 |---|---|
-| [`apk/Drivescape_Drivescape_release.apk`](apk/Drivescape_Drivescape_release.apk) | release 빌드 (versionName 0.2.0) |
+| [`apk/Drivescape_Drivescape_release.apk`](apk/Drivescape_Drivescape_release.apk) | release 빌드 (versionName 0.3.0) |
 
 > 공모전 시연용으로 release 빌드를 Android 디버그 키로 서명했습니다. 정식 배포 시에는 별도 서명 키로 교체합니다.
 
@@ -90,6 +90,7 @@ adb shell am broadcast -a app.drivescape.DEBUG_NAVI -n app.drivescape/.debug.Deb
 |---|---|---|
 | 기본 · 앰비언트 팝 | 74–110 BPM | 신스 패드, 7화음, 정박 리듬 (웹 프로토타입과 같은 소리) |
 | 로파이 · 느린 오후 | 66–88 BPM | 스윙, 재즈 9화음, 일렉트릭 피아노, LP 잡음, 따뜻한 테이프 톤 |
+| 시티팝 · 밤의 고속도로 | 96–122 BPM | 네 박 킥, 옥타브 베이스, 뒷박을 끊어 치는 건반, 왕도 진행(낮 Gmaj7–A7–F#m7–Bm7) |
 
 세트는 `app/src/main/assets/sets/*.json` 데이터로 정의합니다(화성·템포·리듬 패턴 + `style`의 음색 설정). 재생 중 **다음 세트** 버튼이나 스티어링 휠 다음 키로 바꿉니다. 빗소리·와이퍼·깜빡이·브레이크 반응은 모든 세트에 공통입니다.
 
@@ -113,7 +114,7 @@ tools/demo_drive.ps1        Virtual Console 자동 시연·녹화 스크립트
 
 ## 검증
 
-- `app/src/test/.../OfflineRenderTest`: 86초 시나리오를 세트별로 오프라인 렌더링해 `app/build/drivescape_scenario.wav`, `drivescape_scenario_lofi.wav`로 저장하고, NaN·클리핑·초별 음량을 검사합니다. (평균 RMS: 기본 −11.3 dB, 로파이 −12.5 dB)
+- `app/src/test/.../OfflineRenderTest`: 86초 시나리오를 세트별로 오프라인 렌더링해 `app/build/drivescape_scenario.wav`, `drivescape_scenario_lofi.wav`, `drivescape_scenario_citypop.wav`로 저장하고, NaN·클리핑·초별 음량을 검사합니다. (평균 RMS: 기본 −11.3 dB, 로파이 −12.5 dB, 시티팝 −11.5 dB)
   ```bash
   ./gradlew testDebugUnitTest
   ```
@@ -122,5 +123,5 @@ tools/demo_drive.ps1        Virtual Console 자동 시연·녹화 스크립트
 
 ## 남은 계획
 
-- 사운드 세트 추가 (시티팝 · 국악 퓨전 · 키즈)
+- 사운드 세트 추가 (국악 퓨전 · 키즈)
 - SpeechToText 음성 명령, Devbox·실차 검증 (실제 주행 중 남은 시간 갱신 포함)
