@@ -32,6 +32,11 @@ android {
     }
 }
 
+tasks.withType<Test>().configureEach {
+    // 오프라인 렌더 테스트의 디버그 시점 (예: -Pds.debugAt=31.88)
+    project.findProperty("ds.debugAt")?.let { systemProperty("ds.debugAt", it.toString()) }
+}
+
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)

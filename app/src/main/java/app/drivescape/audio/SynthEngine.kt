@@ -54,6 +54,18 @@ class SynthEngine(private val stateProvider: () -> DriveState) {
     private val rainLpFreq = Smoothed(4200.0)
     private val rainGain = Smoothed(0.0)
 
+    // ---- 세트 질감: LP 레코드 잡음, 테이프 흔들림 ----
+    private val vinylAmt = Smoothed(0.0)
+    private val vinylRng = Rng(0x0BADCAFE)
+    private val popL = Biquad(FilterType.BANDPASS, 2400.0, 0.8); private val popR = Biquad(FilterType.BANDPASS, 2400.0, 0.8)
+    private val hiss = PinkNoise(Rng(0x7A7A7A7A))
+    private val hissHp = Biquad(FilterType.HIGHPASS, 2000.0, 1.0)
+    private val wobble = DelayLine(0.05)
+    private val wobbleDepth = Smoothed(0.0)
+    private val setGain = Smoothed(1.0)
+    private var wobblePhase = 0.0
+    private var flutterPhase = 0.0
+
     private val mix = Mix(BLOCK)
 
     /** 화면의 오실로스코프용 최근 출력 (모노) */
@@ -61,7 +73,10 @@ class SynthEngine(private val stateProvider: () -> DriveState) {
     @Volatile var scopeWrite = 0; private set
 
     private var lastControls: Controls? = null
-    private data class Controls(val wiper: Int, val brake: Boolean, val night: Boolean, val park: Boolean)
+    private data class Controls(
+        val wiper: Int, val brake: Boolean, val night: Boolean, val park: Boolean,
+        val tone: Double, val vinyl: Double, val wobbleMs: Double, val outputGain: Double
+    )
 
     fun add(v: Voice) { voices += v }
     fun emit(e: UiEvent) { events += e }
@@ -86,15 +101,20 @@ class SynthEngine(private val stateProvider: () -> DriveState) {
 
     /** 프로토타입 applyControls: 와이퍼·브레이크·시간대·기어가 바뀌면 연속 파라미터 목표값을 옮긴다. */
     private fun applyControls(st: DriveState, force: Boolean = false) {
-        val c = Controls(st.wiper, st.brake, st.night, st.gear == Gear.P)
+        val style = soundSet?.style ?: SoundSet.Style()
+        val c = Controls(st.wiper, st.brake, st.night, st.gear == Gear.P, style.toneCutoff, style.vinyl, style.wobbleMs, style.outputGain)
         if (!force && c == lastControls) return
         val prev = lastControls
         lastControls = c
         rainGain.setTarget(doubleArrayOf(0.0, 0.11, 0.2)[st.wiper.coerceIn(0, 2)], 0.8)
         rainLpFreq.setTarget(if (st.wiper == 2) 6500.0 else 4200.0, 0.5)
-        if (force || prev?.brake != c.brake) {
-            brakeFreq.setTarget(if (st.brake) 650.0 else 18000.0, if (st.brake) 0.07 else 0.35)
+        if (force || prev?.brake != c.brake || prev?.tone != c.tone) {
+            // 브레이크를 떼면 세트의 음색 한계(기본 18kHz)로 돌아간다
+            brakeFreq.setTarget(if (st.brake) 650.0 else style.toneCutoff, if (st.brake) 0.07 else 0.35)
         }
+        vinylAmt.setTarget(style.vinyl, 0.5)
+        wobbleDepth.setTarget(style.wobbleMs / 1000.0, 0.5)
+        if (force && prev == null) setGain.jump(style.outputGain) else setGain.setTarget(style.outputGain, 0.5)
         revOut.setTarget((if (st.night) 0.85 else 0.65) + st.wiper * 0.12 + (if (c.park) 0.2 else 0.0), 0.6)
     }
 
@@ -113,7 +133,7 @@ class SynthEngine(private val stateProvider: () -> DriveState) {
         val set = soundSet
         if (running && set != null) {
             if (composer.set !== set) composer.set = set
-            applyControls(st)
+            applyControls(st)   // 세트가 바뀌면 음색 한계·잡음·흔들림 목표값도 여기서 옮겨 간다
             val blockEnd = frame + n
             while (nextStep < blockEnd) {
                 val sec16 = 60.0 / composer.bpm(st) / 4
@@ -153,13 +173,39 @@ class SynthEngine(private val stateProvider: () -> DriveState) {
                 dryL += pl; dryR += pr; revL += pl * 0.35f; revR += pr * 0.35f
             }
 
+            // LP 레코드 잡음: 드문드문 튀는 소리 + 아주 작은 히스 (세트가 켤 때만)
+            val va = vinylAmt.next()
+            if (va > 1e-4) {
+                var pl = 0f; var pr = 0f
+                if (vinylRng.next() < 7.0 / SR) {
+                    val r = vinylRng.next()
+                    val amp = (0.15 + 0.85 * r * r * r).toFloat()
+                    val pan = vinylRng.next().toFloat()
+                    pl = amp * (1 - pan); pr = amp * pan
+                }
+                val h = hissHp.process(hiss.next()) * 0.012f
+                dryL += (popL.process(pl) * 0.09f + h) * va.toFloat()
+                dryR += (popR.process(pr) * 0.09f + h) * va.toFloat()
+            }
+
             reverb.process(revL, revR)
             val ro = revOut.next().toFloat()
             brakeFreq.next()
             val m = master.next().toFloat()
-            val sL = brakeL.process(dryL + reverb.outL * ro) * m
-            val sR = brakeR.process(dryR + reverb.outR * ro) * m
-            comp.process(sL, sR)
+            var sL = brakeL.process(dryL + reverb.outL * ro) * m
+            var sR = brakeR.process(dryR + reverb.outR * ro) * m
+
+            // 테이프 흔들림: 짧은 딜레이를 천천히(0.6Hz)·빠르게(5.3Hz) 흔들어 음정이 살짝 출렁인다.
+            // 기본 세트는 깊이 0 → 6ms 고정 지연만 생기고 소리는 그대로.
+            wobblePhase += 0.6 / SR; if (wobblePhase >= 1) wobblePhase -= 1
+            flutterPhase += 5.3 / SR; if (flutterPhase >= 1) flutterPhase -= 1
+            val wd = wobbleDepth.next()
+            wobble.read(0.006 + wd * SineTable.at(wobblePhase) + wd * 0.15 * SineTable.at(flutterPhase))
+            wobble.write(sL, sR)
+            sL = wobble.outL; sR = wobble.outR
+
+            val sg = setGain.next().toFloat()
+            comp.process(sL * sg, sR * sg)
             val oL = safety(comp.outL * TRIM); val oR = safety(comp.outR * TRIM)
             out[(offset + i) * 2] = oL
             out[(offset + i) * 2 + 1] = oR

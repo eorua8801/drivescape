@@ -64,6 +64,10 @@ class Composer(private val inst: Instruments, private val emit: (UiEvent) -> Uni
 
     private fun curMode(st: DriveState) = mode ?: (if (st.night) s.night else s.day)
 
+    /** 코드 구성음 (세트의 보이싱, lo~hi 음역으로 접고 겹치는 음은 뺀다) */
+    private fun chordTones(deg: Int, m: SoundSet.Mode, style: SoundSet.Style, lo: Int, hi: Int): List<Int> =
+        style.padVoicing.map { fitRange(midiOf(deg + it, m.scale, s.roots.pad), lo, hi) }.distinct()
+
     private fun bassMidi(deg: Int, st: DriveState) = fitRange(midiOf(deg, curMode(st).scale, s.roots.bass), 36, 47)
 
     private fun arpTones(deg: Int, st: DriveState): List<Int> {
@@ -71,12 +75,23 @@ class Composer(private val inst: Instruments, private val emit: (UiEvent) -> Uni
         return intArrayOf(0, 2, 4, 6, 7).map { fitRange(midiOf(deg + it, sc, s.roots.arp), 67, 86) }.distinct().sorted()
     }
 
-    /** 16분음표 하나를 예약한다. t = 시작 샘플, sec16 = 16분음표 길이(초). */
-    fun scheduleStep(t: Long, sec16: Double, st: DriveState, setDelay: (Double) -> Unit) {
+    /** 16분음표 하나를 예약한다. stepStart = 시작 샘플, sec16 = 16분음표 길이(초). */
+    fun scheduleStep(stepStart: Long, sec16: Double, st: DriveState, setDelay: (Double) -> Unit) {
         val s16 = step % 16
         val lv = level(st)
         val b = build(st)
         val beat = sec16 * 4
+        val style = s.style
+        inst.style = style
+        // 스윙: 홀수 16분음표(뒷박)를 조금 늦춘다. 마디 시작 같은 짝수 박은 그대로.
+        val t = if (s16 % 2 == 1 && style.swing > 0) stepStart + (style.swing * sec16 * SR).toLong() else stepStart
+
+        if (style.padStyle == "epiano" && s16 != 0) {
+            // 일렉트릭 피아노 컴핑: 2박 뒤(6)와 4박 앞 꾸밈(11)에 같은 코드를 가볍게 다시 친다
+            val tones = chordTones(chordDeg, curMode(st), style, 55, 74)
+            if (lv >= 1 && s16 == 6) inst.epiano(t, tones, if (st.brake) 0.35 else 0.55, sec16 * 6, 0.3)
+            if (lv >= 2 && s16 == 11 && !st.brake) inst.epiano(t, tones, 0.35, sec16 * 3, 0.3)
+        }
 
         if (s16 == 0) {
             barCount++
@@ -87,11 +102,25 @@ class Composer(private val inst: Instruments, private val emit: (UiEvent) -> Uni
             chordDeg = prog[ci]
             val barDur = sec16 * 16
             val cutoff = (if (st.night) 650.0 else 950.0) + (if (st.gear == Gear.D) st.speed * 11.0 else 0.0) + b * 1800
-            val tones = intArrayOf(0, 2, 4, 6).map { fitRange(midiOf(chordDeg + it, m.scale, s.roots.pad), 55, 71) }.toMutableList()
-            if (b >= 0.8) tones += fitRange(midiOf(chordDeg + 4, m.scale, s.roots.pad), 74, 86)
-            inst.pad(t, tones, barDur, cutoff,
-                gain = if (st.gear == Gear.P) 0.05 else 0.042,
-                send = if (st.gear == Gear.P) 0.55 else 0.35)
+            if (style.padStyle == "epiano") {
+                val tones = chordTones(chordDeg, m, style, 55, 74).toMutableList()
+                if (b >= 0.8) tones += fitRange(midiOf(chordDeg + 4, m.scale, s.roots.pad), 74, 86)
+                val park = st.gear == Gear.P
+                inst.epiano(t, tones, if (park) 0.8 else 1.0, barDur * (if (park) 1.4 else 0.9), if (park) 0.5 else 0.3)
+                if (style.bed > 0) {
+                    // 건반 아래에 마디 내내 이어지는 어둡고 부드러운 패드
+                    val bedTones = chordTones(chordDeg, m, style, 55, 71)
+                    inst.pad(t, bedTones, barDur, minOf(cutoff, 900.0),
+                        gain = (if (park) 0.05 else 0.042) * style.bed,
+                        send = if (park) 0.55 else 0.35)
+                }
+            } else {
+                val tones = chordTones(chordDeg, m, style, 55, 71).toMutableList()
+                if (b >= 0.8) tones += fitRange(midiOf(chordDeg + 4, m.scale, s.roots.pad), 74, 86)
+                inst.pad(t, tones, barDur, cutoff,
+                    gain = if (st.gear == Gear.P) 0.05 else 0.042,
+                    send = if (st.gear == Gear.P) 0.55 else 0.35)
+            }
             setDelay(beat * 0.75)
             emit(UiEvent.Bar(t, m.chords[ci % m.chords.size], barCount + 1))
             if (b >= 0.8 && lv >= 0) inst.crash(t)
