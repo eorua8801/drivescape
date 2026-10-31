@@ -1,0 +1,861 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Drivescape</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Michroma&display=swap">
+<style>
+/* Layout: an in-car split screen. Driving signals on the left, the live sound monitor on the right; on phones the monitor sticks to the top while you drive the controls below. */
+:root{
+  --bg:#ECEFF2;
+  --panel:#F8F9FB;
+  --ink:#121B24;
+  --muted:#56636F;
+  --line:#D2D9E0;
+  --amber:#A35600;
+  --on-amber:#FFFFFF;
+  --rain:#1B64A6;
+  --on-rain:#FFFFFF;
+  --brake:#B3342A;
+  --on-brake:#FFFFFF;
+  --display:"Michroma","IBM Plex Sans KR",system-ui,sans-serif;
+  --body:"IBM Plex Sans KR","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0A1017; --panel:#111A24; --ink:#E3EAF0; --muted:#8796A4; --line:#223040;
+    --amber:#FFA42B; --on-amber:#1A1004; --rain:#62B4EE; --on-rain:#061420; --brake:#FF6E5E; --on-brake:#1E0704;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0A1017; --panel:#111A24; --ink:#E3EAF0; --muted:#8796A4; --line:#223040;
+  --amber:#FFA42B; --on-amber:#1A1004; --rain:#62B4EE; --on-rain:#061420; --brake:#FF6E5E; --on-brake:#1E0704;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 56px;display:flex;flex-direction:column;gap:18px}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 24px}
+.top-text{min-width:0;flex:1 1 380px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--muted);margin:0}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(28px,6.4vw,46px);letter-spacing:.08em;line-height:1.15;margin:6px 0 8px}
+.lede{margin:0;color:var(--muted);max-width:58ch;text-wrap:pretty}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:0 18px;border-radius:999px;border:1.5px solid var(--ink);background:transparent;font-weight:600;font-size:15px;white-space:nowrap}
+.btn svg{width:18px;height:18px;flex:none}
+.btn.primary{background:var(--amber);border-color:var(--amber);color:var(--on-amber)}
+.btn.primary[aria-pressed="true"]{background:transparent;color:var(--amber)}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+
+.scene{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted)}
+.scene-cap{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scene-cap b{color:var(--ink);font-weight:600}
+.scene-time{font-family:var(--mono);font-variant-numeric:tabular-nums;flex:none}
+.scene-track{flex:0 0 120px;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+.scene-track i{display:block;height:100%;width:100%;background:var(--amber);transform-origin:left;transform:scaleX(0)}
+
+/* grid */
+.grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);grid-template-rows:auto 1fr;grid-template-areas:"drive monitor" "drive layers";gap:16px;align-items:start}
+.drive{grid-area:drive}.monitor{grid-area:monitor}.layers{grid-area:layers}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0}
+.panel-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+h2{font-size:15px;font-weight:700;margin:0;letter-spacing:.01em}
+.tag{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+
+/* monitor */
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.stat{min-width:0}
+.stat .k{display:block;font-size:11.5px;color:var(--muted);letter-spacing:.04em}
+.stat .v{display:block;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat .v.num{font-family:var(--display);font-weight:400;font-size:18px}
+.stat .v small{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:3px}
+.beats{display:inline-flex;gap:4px;vertical-align:middle;margin-left:6px}
+.beats i{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.beats i.on{background:var(--amber)}
+.scope-box{position:relative;margin-top:12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);overflow:hidden}
+#scope{display:block;width:100%;height:132px}
+.scope-hint{position:absolute;inset:auto 10px 8px auto;font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+/* controls */
+.ctls{display:flex;flex-direction:column;gap:18px}
+.ctl{display:flex;flex-direction:column;gap:8px;min-width:0}
+.ctl-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ctl-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.lbl{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.02em}
+.api{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.big{font-family:var(--display);font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
+.big small{font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:6px}
+.note{font-size:12.5px;color:var(--muted);margin:0}
+.note b{color:var(--ink);font-weight:600}
+
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;padding:4px;border-radius:11px;background:var(--bg);border:1px solid var(--line)}
+.seg button{min-height:46px;border:0;border-radius:8px;background:transparent;color:var(--muted);font-weight:600;font-size:15px;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:background-color .15s,color .15s}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+.seg.rain button[aria-pressed="true"]{background:var(--rain);color:var(--on-rain)}
+.seg.turn button[aria-pressed="true"]{background:transparent;color:var(--amber);box-shadow:inset 0 0 0 2px var(--amber)}
+.seg.turn button[data-turn="0"][aria-pressed="true"]{background:var(--ink);color:var(--panel);box-shadow:none}
+.seg.turn button.lit{background:var(--amber);color:var(--on-amber)}
+.seg.turn svg{width:20px;height:20px}
+@keyframes blink{0%,49%{background:var(--amber);color:var(--on-amber)}50%,100%{background:transparent;color:var(--amber)}}
+.seg.turn button.blink-css{animation:blink .8s steps(1) infinite}
+
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:34px;margin:0;background:transparent;--p:40%}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(var(--amber),var(--amber)) 0/var(--p) 100% no-repeat,var(--line)}
+input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:var(--line)}
+input[type=range]::-moz-range-progress{height:6px;border-radius:3px;background:var(--amber)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:26px;height:26px;margin-top:-10px;border-radius:50%;background:var(--panel);border:2px solid var(--ink)}
+input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--panel);border:2px solid var(--ink)}
+
+.brake-btn{width:100%;min-height:58px;border-radius:11px;border:2px solid var(--brake);background:transparent;color:var(--brake);font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;gap:10px;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;transition:background-color .1s,color .1s}
+.brake-btn small{font-weight:500;font-size:12.5px;opacity:.85}
+.brake-btn[aria-pressed="true"]{background:var(--brake);color:var(--on-brake)}
+
+/* layers */
+.layer-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.layer{display:grid;grid-template-columns:minmax(0,9.5em) minmax(0,1fr);align-items:center;gap:12px}
+.layer-name{min-width:0;line-height:1.25}
+.layer-name b{display:block;font-size:14px;font-weight:600}
+.layer-name span{display:block;font-size:11.5px;color:var(--muted)}
+.meter{height:8px;border-radius:4px;background:var(--bg);border:1px solid var(--line);overflow:hidden}
+.meter i{display:block;height:100%;width:100%;background:var(--ink);transform-origin:left;transform:scaleX(0)}
+.layer[data-k="rain"] .meter i,.layer[data-k="wiper"] .meter i{background:var(--rain)}
+.layer[data-k="turn"] .meter i,.layer[data-k="bell"] .meter i{background:var(--amber)}
+
+/* mapping */
+.map-scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px 10px 0;border-top:1px solid var(--line)}
+thead th{border-top:0;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.03em;padding-top:0}
+td:first-child{font-weight:600;white-space:nowrap}
+td.src{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
+.foot{font-size:12.5px;color:var(--muted);margin:12px 0 0;max-width:80ch}
+
+@media (max-width:760px){
+  .grid{grid-template-columns:minmax(0,1fr);grid-template-rows:none;grid-template-areas:"monitor" "drive" "layers"}
+  .monitor{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;align-self:start;box-shadow:0 6px 16px -12px rgba(0,0,0,.35)}
+  #scope{height:72px}
+  .scope-box{margin-top:10px}
+  .stat .v{font-size:15px}
+  .stat .v.num{font-size:16px}
+  .scene-track{flex-basis:64px}
+}
+@media (max-width:520px){
+  .scene{flex-wrap:wrap;row-gap:6px}
+  .scene-cap{flex-basis:100%;white-space:normal}
+  .scene-track{flex:1 1 auto}
+}
+@media (max-width:420px){
+  .btn{padding:0 14px}
+  .actions{width:100%}
+  .actions .btn{flex:1 1 0;justify-content:center}
+  .layer{grid-template-columns:minmax(0,8.5em) minmax(0,1fr)}
+}
+@media (prefers-reduced-motion: reduce){
+  *{transition:none!important}
+  .seg.turn button.blink-css{animation:none}
+}
+</style>
+<style>body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="top-text">
+      <p class="eyebrow">Pleos Connect 앱 프로토타입 · 인카 엔터테인먼트</p>
+      <h1>DRIVESCAPE</h1>
+      <p class="lede">기어, 속도, 와이퍼, 방향지시등, 브레이크, 남은 경로가 실시간으로 음악을 바꿉니다. 녹음된 음원 없이 모든 소리를 코드로 합성합니다.</p>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="power" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>
+        <span id="power-label">소리 켜기</span>
+      </button>
+      <button class="btn" id="scene-btn" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path id="scene-icon" d="M8 5.5v13l10.5-6.5z"/></svg>
+        <span id="scene-label">시나리오 재생</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="scene" aria-live="polite">
+    <span class="scene-cap" id="scene-cap"><b>직접 조작 모드</b> · 시나리오는 12분 거리를 86초로 압축해 보여줍니다</span>
+    <span class="scene-track" aria-hidden="true"><i id="scene-bar"></i></span>
+    <span class="scene-time" id="scene-time">0:00 / 1:26</span>
+  </div>
+
+  <div class="grid">
+    <section class="panel monitor" aria-labelledby="mon-h">
+      <h2 id="mon-h" hidden>사운드 모니터</h2>
+      <div class="stats">
+        <div class="stat"><span class="k">템포</span><span class="v num"><span id="st-bpm">88</span><small>BPM</small></span></div>
+        <div class="stat"><span class="k">코드</span><span class="v" id="st-chord">Dmaj7</span></div>
+        <div class="stat"><span class="k">마디 · 박</span><span class="v"><span id="st-bar">1</span><span class="beats" aria-hidden="true"><i></i><i></i><i></i><i></i></span></span></div>
+        <div class="stat"><span class="k">조성</span><span class="v" id="st-mode">낮 · 장조</span></div>
+      </div>
+      <div class="scope-box">
+        <canvas id="scope" aria-label="출력 파형"></canvas>
+        <span class="scope-hint" id="scope-hint">소리 켜기를 누르면 재생됩니다</span>
+      </div>
+    </section>
+
+    <section class="panel drive" aria-labelledby="drive-h">
+      <div class="panel-head"><h2 id="drive-h">주행 신호</h2><span class="tag">에뮬레이터 VHAL 신호 대신 직접 조작</span></div>
+      <div class="ctls">
+        <div class="ctl-pair">
+          <div class="ctl">
+            <div class="ctl-top"><span class="lbl">기어</span></div>
+            <div class="seg" role="group" aria-label="기어">
+              <button id="gear-p" data-gear="P" aria-pressed="false">P 주차</button>
+              <button id="gear-d" data-gear="D" aria-pressed="true">D 주행</button>
+            </div>
+          </div>
+          <div class="ctl">
+            <div class="ctl-top"><span class="lbl">시간대</span></div>
+            <div class="seg" role="group" aria-label="시간대">
+              <button id="tod-day" data-night="0" aria-pressed="true">낮</button>
+              <button id="tod-night" data-night="1" aria-pressed="false">밤</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="ctl">
+          <div class="ctl-top">
+            <label class="lbl" for="speed">속도</label>
+            <output class="big" for="speed"><span id="speed-val">48</span><small>km/h</small></output>
+          </div>
+          <input type="range" id="speed" min="0" max="120" step="1" value="48">
+          <p class="note" id="speed-note">리듬 단계 <b>시내</b> · 킥과 스네어, 하이햇 8분음표</p>
+        </div>
+
+        <div class="ctl">
+          <div class="ctl-top"><span class="lbl">와이퍼</span><span class="api">Wiper API</span></div>
+          <div class="seg rain" role="group" aria-label="와이퍼">
+            <button id="wiper-0" data-wiper="0" aria-pressed="true">끔</button>
+            <button id="wiper-1" data-wiper="1" aria-pressed="false">저속</button>
+            <button id="wiper-2" data-wiper="2" aria-pressed="false">고속</button>
+          </div>
+        </div>
+
+        <div class="ctl">
+          <div class="ctl-top"><span class="lbl">방향지시등</span><span class="api">TurnSignal API</span></div>
+          <div class="seg turn" role="group" aria-label="방향지시등">
+            <button id="turn-l" data-turn="-1" aria-pressed="false" aria-label="왼쪽"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 12l8-7v4.5h10v5H11V19z"/></svg>좌</button>
+            <button id="turn-0" data-turn="0" aria-pressed="true">끔</button>
+            <button id="turn-r" data-turn="1" aria-pressed="false" aria-label="오른쪽">우<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 12l-8-7v4.5H3v5h10V19z"/></svg></button>
+          </div>
+        </div>
+
+        <div class="ctl">
+          <div class="ctl-top"><span class="lbl">브레이크</span><span class="api">Brake API</span></div>
+          <button class="brake-btn" id="brake" aria-pressed="false">브레이크 <small>누르고 있는 동안</small></button>
+        </div>
+
+        <div class="ctl">
+          <div class="ctl-top">
+            <label class="lbl" for="remain">도착까지</label>
+            <output class="big" for="remain"><span id="remain-val">12.0</span><small id="remain-unit">분</small></output>
+          </div>
+          <input type="range" id="remain" min="0" max="20" step="0.5" value="12">
+          <p class="note">5분 전부터 아르페지오가 촘촘해지고, 1분 전 클라이맥스, 0분이 되면 도착 차임이 울립니다.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel layers" aria-labelledby="lay-h">
+      <div class="panel-head"><h2 id="lay-h">지금 울리는 소리</h2><span class="tag">레이어별 활동량</span></div>
+      <ul class="layer-list" id="layer-list"></ul>
+    </section>
+  </div>
+
+  <section class="panel" aria-labelledby="map-h">
+    <div class="panel-head"><h2 id="map-h">차량 신호와 음악 규칙</h2><span class="tag">모든 음은 같은 스케일 안에서만 생성</span></div>
+    <div class="map-scroll">
+      <table>
+        <thead><tr><th>차량 신호</th><th>음악 반응</th><th>데이터 출처 (Pleos)</th></tr></thead>
+        <tbody>
+          <tr><td>기어 P / D</td><td>P는 패드와 차임만 남은 정차 앰비언트, D는 리듬이 들어간 주행 그루브</td><td class="src">AAOS 차량 속성 · 기어</td></tr>
+          <tr><td>속도</td><td>템포 74→110 BPM, 베이스·드럼 밀도 4단계(정지·저속·시내·고속), 패드가 밝아짐</td><td class="src">AAOS 차량 속성 · 속도</td></tr>
+          <tr><td>와이퍼</td><td>빗소리와 스케일 안의 음으로 떨어지는 빗방울, 와이퍼 스윕이 박자에 맞춰 좌우로 이동</td><td class="src">Vehicle SDK · Wiper</td></tr>
+          <tr><td>방향지시등</td><td>깜빡임 주기에 맞춘 틱톡 퍼커션, 켠 쪽 스피커에서 들림</td><td class="src">Vehicle SDK · TurnSignal</td></tr>
+          <tr><td>브레이크</td><td>필터가 닫히며 소리가 부드럽게 가라앉고 하이햇이 빠짐</td><td class="src">Vehicle SDK · Brake</td></tr>
+          <tr><td>도착까지 남은 시간</td><td>5분 전 빌드업, 1분 전 클라이맥스, 도착 순간 차임</td><td class="src">NaviHelper SDK · 경로 정보</td></tr>
+          <tr><td>시간대</td><td>낮은 D 장조, 밤은 D 단조(에올리안). 다음 마디부터 바뀜</td><td class="src">시스템 시계</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="foot">속도와 기어는 AAOS 표준 차량 속성으로 읽는다고 가정했습니다. 실제 탑재 차량의 지원 여부는 Pleos의 API 호환성 표로 확인해야 합니다. 앱에서는 Pleos 오디오 포커스 정책에 따라 내비 안내와 경고음이 나올 때 볼륨을 낮춥니다. 시나리오를 화면 녹화하면 86초짜리 시연 영상이 됩니다.</p>
+  </section>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (s) => document.querySelector(s);
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+
+  function nightByClock() { const h = new Date().getHours(); return h >= 19 || h < 6; }
+
+  const state = { gear: 'D', speed: 48, wiper: 0, turn: 0, brake: false, remaining: 12, night: nightByClock() };
+
+  // ---------- music theory ----------
+  const SCALES = { day: [0, 2, 4, 5, 7, 9, 11], night: [0, 2, 3, 5, 7, 8, 10] };
+  const PROG = { day: [0, 3, 5, 4], night: [0, 5, 2, 6] };
+  const CHORDS = { day: ['Dmaj7', 'Gmaj7', 'Bm7', 'A7'], night: ['Dm7', 'B♭maj7', 'Fmaj7', 'C7'] };
+  function midiOf(deg, scale, base) { const o = Math.floor(deg / 7), i = ((deg % 7) + 7) % 7; return base + 12 * o + scale[i]; }
+  function fitRange(m, lo, hi) { while (m < lo) m += 12; while (m > hi) m -= 12; return m; }
+  const BASS = { 0: [0], 1: [0, 8], 2: [0, 6, 8, 14], 3: [0, 2, 4, 6, 8, 10, 12, 14] };
+  const KICK = { 1: [0, 8], 2: [0, 8, 10], 3: [0, 4, 8, 12] };
+  const LEVEL_NOTE = [
+    '<b>정지</b> · 베이스만 길게',
+    '<b>저속</b> · 킥과 베이스 2분음표',
+    '<b>시내</b> · 킥과 스네어, 하이햇 8분음표',
+    '<b>고속</b> · 4박 킥, 하이햇 16분음표, 베이스 8분음표'
+  ];
+
+  function bpmNow() { return state.gear === 'P' ? 66 : 74 + clamp(state.speed, 0, 120) * 0.3; }
+  function level() { if (state.gear === 'P') return -1; const s = state.speed; return s < 5 ? 0 : s < 35 ? 1 : s < 75 ? 2 : 3; }
+  function build() { return state.gear === 'D' ? clamp((5 - state.remaining) / 5, 0, 1) : 0; }
+
+  // ---------- audio engine ----------
+  let ctx = null, running = false, N = {};
+  let nextTime = 0, step = 0, barCount = -1, curMode = 'day', chordDeg = 0, arpIdx = 0, arrived = false;
+  const vq = [];
+  const meters = { pad: 0, bass: 0, drums: 0, arp: 0, rain: 0, wiper: 0, turn: 0, bell: 0 };
+  let lampUntil = 0, beatOn = -1, chordName = null, barShown = 0, arriveFlashUntil = 0;
+
+  function makeNoise(sec) {
+    const b = ctx.createBuffer(1, Math.floor(ctx.sampleRate * sec), ctx.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    return b;
+  }
+  function makePink(sec) {
+    const b = ctx.createBuffer(2, Math.floor(ctx.sampleRate * sec), ctx.sampleRate);
+    for (let c = 0; c < 2; c++) {
+      const d = b.getChannelData(c); let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+      for (let i = 0; i < d.length; i++) {
+        const w = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759; b2 = 0.969 * b2 + w * 0.153852;
+        b3 = 0.8665 * b3 + w * 0.3104856; b4 = 0.55 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.016898;
+        d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11; b6 = w * 0.115926;
+      }
+    }
+    return b;
+  }
+  function makeIR(sec) {
+    const len = Math.floor(ctx.sampleRate * sec), b = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let c = 0; c < 2; c++) {
+      const d = b.getChannelData(c);
+      for (let i = 0; i < len; i++) { const x = i / len; d[i] = (Math.random() * 2 - 1) * Math.pow(1 - x, 2.6) * (i < 400 ? i / 400 : 1); }
+    }
+    return b;
+  }
+
+  function initAudio() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    ctx = new AC({ latencyHint: 'playback' });
+    N.comp = ctx.createDynamicsCompressor();
+    N.comp.threshold.value = -16; N.comp.knee.value = 12; N.comp.ratio.value = 3.5; N.comp.attack.value = 0.008; N.comp.release.value = 0.25;
+    N.master = ctx.createGain(); N.master.gain.value = 0;
+    N.analyser = ctx.createAnalyser(); N.analyser.fftSize = 2048;
+    N.brakeF = ctx.createBiquadFilter(); N.brakeF.type = 'lowpass'; N.brakeF.frequency.value = 18000; N.brakeF.Q.value = 0.9;
+    N.dry = ctx.createGain();
+    N.revIn = ctx.createGain();
+    N.conv = ctx.createConvolver(); N.conv.buffer = makeIR(2.8);
+    N.revOut = ctx.createGain(); N.revOut.gain.value = 0.7;
+    N.dry.connect(N.brakeF); N.revIn.connect(N.conv); N.conv.connect(N.revOut); N.revOut.connect(N.brakeF);
+    N.brakeF.connect(N.master); N.master.connect(N.comp); N.comp.connect(N.analyser); N.analyser.connect(ctx.destination);
+
+    N.arpBus = ctx.createGain();
+    N.delay = ctx.createDelay(2); N.delay.delayTime.value = 0.5;
+    N.fb = ctx.createGain(); N.fb.gain.value = 0.36;
+    N.dLP = ctx.createBiquadFilter(); N.dLP.type = 'lowpass'; N.dLP.frequency.value = 3000;
+    N.dWet = ctx.createGain(); N.dWet.gain.value = 0.45;
+    N.arpBus.connect(N.dry); N.arpBus.connect(N.delay); N.delay.connect(N.dLP); N.dLP.connect(N.fb); N.fb.connect(N.delay);
+    N.dLP.connect(N.dWet); N.dWet.connect(N.dry); N.dWet.connect(N.revIn);
+
+    N.noise = makeNoise(4);
+
+    N.rainSrc = ctx.createBufferSource(); N.rainSrc.buffer = makePink(4); N.rainSrc.loop = true;
+    N.rainHP = ctx.createBiquadFilter(); N.rainHP.type = 'highpass'; N.rainHP.frequency.value = 450;
+    N.rainLP = ctx.createBiquadFilter(); N.rainLP.type = 'lowpass'; N.rainLP.frequency.value = 4200;
+    N.rainG = ctx.createGain(); N.rainG.gain.value = 0;
+    const rainSend = ctx.createGain(); rainSend.gain.value = 0.35;
+    N.rainSrc.connect(N.rainHP); N.rainHP.connect(N.rainLP); N.rainLP.connect(N.rainG); N.rainG.connect(N.dry); N.rainG.connect(rainSend); rainSend.connect(N.revIn);
+    N.rainSrc.start();
+  }
+
+  function out(node, o) {
+    o = o || {};
+    let last = node;
+    if (o.pan) { const p = ctx.createStereoPanner(); p.pan.value = clamp(o.pan, -1, 1); node.connect(p); last = p; }
+    last.connect(o.bus || N.dry);
+    if (o.send > 0) { const g = ctx.createGain(); g.gain.value = o.send; last.connect(g); g.connect(N.revIn); }
+  }
+  function mark(t, k, v) { vq.push({ t: t, type: 'meter', k: k, v: v }); }
+
+  function kick(t, vel) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(46, t + 0.13);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.85 * vel, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
+    o.connect(g); out(g, { send: 0.04 }); o.start(t); o.stop(t + 0.45);
+    mark(t, 'drums', vel);
+  }
+  function noiseHit(t, p) {
+    const s = ctx.createBufferSource(); s.buffer = N.noise;
+    const f = ctx.createBiquadFilter(); f.type = p.type; f.frequency.value = p.freq; f.Q.value = p.q;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(p.gain, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t + p.dur);
+    s.connect(f); f.connect(g); out(g, { pan: p.pan || 0, send: p.send || 0 });
+    s.start(t, Math.random() * 1.8, Math.min(2, p.dur + 0.05));
+  }
+  function snare(t, vel) {
+    noiseHit(t, { type: 'bandpass', freq: 1900, q: 0.9, dur: 0.22, gain: 0.3 * vel, send: 0.22 });
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'triangle'; o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(160, t + 0.08);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22 * vel, t + 0.003); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    o.connect(g); out(g, { send: 0.12 }); o.start(t); o.stop(t + 0.15);
+    mark(t, 'drums', 0.8 * vel);
+  }
+  function hat(t, vel, open) {
+    noiseHit(t, { type: 'highpass', freq: 7600, q: 0.6, dur: open ? 0.22 : 0.045, gain: 0.1 * vel, pan: 0.18, send: 0.05 });
+    mark(t, 'drums', 0.45 * vel);
+  }
+  function crash(t) { noiseHit(t, { type: 'highpass', freq: 5200, q: 0.5, dur: 1.8, gain: 0.12, send: 0.5 }); mark(t, 'drums', 1); }
+
+  function pad(t, deg, dur, opt) {
+    const sc = SCALES[curMode];
+    const tones = [0, 2, 4, 6].map((k) => fitRange(midiOf(deg + k, sc, 50), 55, 71));
+    if (opt.shimmer) tones.push(fitRange(midiOf(deg + 4, sc, 50), 74, 86));
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = opt.cutoff; f.Q.value = 0.6;
+    const g = ctx.createGain();
+    const att = Math.min(1.4, dur * 0.45), rel = 2.2;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(opt.gain, t + att);
+    g.gain.setValueAtTime(opt.gain, t + dur); g.gain.linearRampToValueAtTime(0.0001, t + dur + rel);
+    f.connect(g); out(g, { send: opt.send });
+    tones.forEach((m) => {
+      [-7, 7].forEach((c) => {
+        const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = mtof(m); o.detune.value = c + (Math.random() * 4 - 2);
+        o.connect(f); o.start(t); o.stop(t + dur + rel + 0.05);
+      });
+    });
+    mark(t, 'pad', 1);
+  }
+  function bass(t, midi, dur, vel) {
+    const o = ctx.createOscillator(), o2 = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = 'triangle'; o2.type = 'sine'; o.frequency.value = mtof(midi); o2.frequency.value = mtof(midi);
+    f.type = 'lowpass'; f.frequency.value = 700;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.4 * vel, t + 0.01); g.gain.setTargetAtTime(0.0001, t + dur * 0.6, dur * 0.25);
+    o.connect(f); o2.connect(f); f.connect(g); out(g, { send: 0.04 });
+    o.start(t); o2.start(t); o.stop(t + dur + 0.6); o2.stop(t + dur + 0.6);
+    mark(t, 'bass', vel);
+  }
+  function pluck(t, midi, vel, pan) {
+    const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = 'square'; o.frequency.value = mtof(midi);
+    f.type = 'lowpass'; f.frequency.setValueAtTime(3800, t); f.frequency.exponentialRampToValueAtTime(700, t + 0.25); f.Q.value = 2;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.06 * vel, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+    o.connect(f); f.connect(g); out(g, { pan: pan, send: 0.14, bus: N.arpBus });
+    o.start(t); o.stop(t + 0.4);
+    mark(t, 'arp', vel);
+  }
+  function bell(t, midi, vel, pan, len) {
+    const base = mtof(midi);
+    [[1, 1], [2.76, 0.35], [5.4, 0.12]].forEach((p, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain(), d = len / (1 + i * 1.2);
+      o.type = 'sine'; o.frequency.value = base * p[0];
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.11 * vel * p[1], t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      o.connect(g); out(g, { pan: pan, send: 0.45 }); o.start(t); o.stop(t + d + 0.05);
+    });
+    mark(t, 'bell', vel);
+  }
+  function drop(t, midi, pan) {
+    const o = ctx.createOscillator(), g = ctx.createGain(), fq = mtof(midi);
+    o.type = 'sine'; o.frequency.setValueAtTime(fq * 0.8, t); o.frequency.exponentialRampToValueAtTime(fq, t + 0.025);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.08, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+    o.connect(g); out(g, { pan: pan, send: 0.5 }); o.start(t); o.stop(t + 0.25);
+    mark(t, 'rain', 0.9);
+  }
+  function swish(t, dur, dir) {
+    const s = ctx.createBufferSource(); s.buffer = N.noise;
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.4;
+    f.frequency.setValueAtTime(700, t); f.frequency.exponentialRampToValueAtTime(2600, t + dur * 0.5); f.frequency.exponentialRampToValueAtTime(800, t + dur);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.085, t + dur * 0.35); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    const p = ctx.createStereoPanner(); p.pan.setValueAtTime(-0.7 * dir, t); p.pan.linearRampToValueAtTime(0.7 * dir, t + dur);
+    const r = ctx.createGain(); r.gain.value = 0.2;
+    s.connect(f); f.connect(g); g.connect(p); p.connect(N.dry); p.connect(r); r.connect(N.revIn);
+    s.start(t, Math.random() * 1.5, Math.min(2, dur + 0.05));
+    mark(t, 'wiper', 1);
+  }
+  function tick(t, tock, pan, beat) {
+    const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = 'triangle'; o.frequency.value = tock ? 1350 : 2100;
+    f.type = 'highpass'; f.frequency.value = 900;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(tock ? 0.1 : 0.17, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t + (tock ? 0.035 : 0.05));
+    o.connect(f); f.connect(g); out(g, { pan: pan, send: 0.08 }); o.start(t); o.stop(t + 0.07);
+    noiseHit(t, { type: 'highpass', freq: 4000, q: 0.5, dur: 0.012, gain: tock ? 0.05 : 0.09, pan: pan, send: 0 });
+    mark(t, 'turn', tock ? 0.6 : 1);
+    if (!tock) vq.push({ t: t, type: 'blink', dur: beat * 0.5 });
+  }
+
+  function bassMidi(deg) { return fitRange(midiOf(deg, SCALES[curMode], 38), 36, 47); }
+  function arpTones(deg) {
+    const sc = SCALES[curMode];
+    const t = [0, 2, 4, 6, 7].map((k) => fitRange(midiOf(deg + k, sc, 62), 67, 86));
+    return Array.from(new Set(t)).sort((a, b) => a - b);
+  }
+
+  function scheduleStep(t, sec16) {
+    const s16 = step % 16, S = state, lv = level(), b = build(), beat = sec16 * 4;
+    if (s16 === 0) {
+      barCount++;
+      curMode = S.night ? 'night' : 'day';
+      const ci = ((barCount % 4) + 4) % 4;
+      chordDeg = PROG[curMode][ci];
+      const barDur = sec16 * 16;
+      const cutoff = (S.night ? 650 : 950) + (S.gear === 'D' ? S.speed * 11 : 0) + b * 1800;
+      pad(t, chordDeg, barDur, { cutoff: cutoff, gain: S.gear === 'P' ? 0.05 : 0.042, send: S.gear === 'P' ? 0.55 : 0.35, shimmer: b >= 0.8 });
+      N.delay.delayTime.setTargetAtTime(beat * 0.75, t, 0.05);
+      vq.push({ t: t, type: 'bar', chord: CHORDS[curMode][ci], bar: barCount + 1 });
+      if (b >= 0.8 && lv >= 0) crash(t);
+      if (lv === -1) bass(t, bassMidi(chordDeg), barDur * 0.9, 0.35);
+    }
+    if (s16 % 4 === 0) vq.push({ t: t, type: 'beat', n: s16 / 4 });
+    const root = bassMidi(chordDeg);
+
+    if (lv >= 0) {
+      const bl = S.brake ? Math.min(lv, 1) : lv;
+      if (BASS[bl].indexOf(s16) >= 0) {
+        const oct = (bl === 3 && s16 % 4 === 2) ? 12 : 0;
+        const len = bl === 0 ? sec16 * 16 : bl === 1 ? sec16 * 8 : sec16 * 2;
+        bass(t, root + oct, len, bl === 0 ? 0.55 : 0.85);
+      }
+    }
+    if (lv >= 1) {
+      if (KICK[lv].indexOf(s16) >= 0 && !(S.brake && s16 !== 0)) kick(t, s16 === 0 ? 1 : 0.8);
+      if (!S.brake) {
+        if (lv >= 2 && (s16 === 4 || s16 === 12)) snare(t, 0.9);
+        if (lv === 1 && s16 === 12) snare(t, 0.35);
+        if (lv === 2 && s16 % 2 === 0) hat(t, s16 % 4 === 2 ? 1 : 0.55, s16 === 14 && barCount % 2 === 1);
+        if (lv === 3) hat(t, s16 % 4 === 2 ? 1 : s16 % 2 === 0 ? 0.6 : 0.35, s16 === 14);
+        if (lv >= 2 && barCount % 4 === 3 && s16 >= 13) snare(t, 0.4 + 0.15 * (s16 - 13));
+      }
+    }
+
+    let rate = 0;
+    if (lv >= 2) rate = 1;
+    if (lv === 3) rate = 2;
+    if (b > 0) rate = Math.max(rate, b >= 0.75 ? 3 : 2);
+    if (S.brake) rate = Math.min(rate, 1);
+    const every = rate === 3 ? 1 : rate === 2 ? 2 : rate === 1 ? 4 : 0;
+    if (every && s16 % every === 0) {
+      const tones = arpTones(chordDeg);
+      const n = tones[arpIdx % tones.length]; arpIdx++;
+      pluck(t, n, s16 % 4 === 0 ? 1 : 0.65, arpIdx % 2 ? -0.35 : 0.35);
+    }
+
+    if (lv === -1 && (s16 === 0 || s16 === 8) && Math.random() < 0.4) {
+      const tones = arpTones(chordDeg);
+      bell(t, tones[Math.floor(Math.random() * tones.length)], 0.55, Math.random() * 1.2 - 0.6, 3.2);
+    }
+    if (S.wiper > 0 && Math.random() < (S.wiper === 1 ? 0.16 : 0.32)) {
+      drop(t + Math.random() * sec16 * 0.6, midiOf(Math.floor(Math.random() * 10), SCALES[curMode], 74), Math.random() * 1.6 - 0.8);
+    }
+    if (S.wiper === 1 && s16 % 8 === 0) swish(t, beat * 1.6, Math.floor(step / 8) % 2 ? 1 : -1);
+    if (S.wiper === 2 && s16 % 4 === 0) swish(t, beat * 0.85, Math.floor(step / 4) % 2 ? 1 : -1);
+    if (S.turn !== 0 && s16 % 2 === 0) tick(t, s16 % 4 === 2, S.turn * 0.75, beat);
+  }
+
+  function scheduleChime() {
+    const sec16 = 60 / bpmNow() / 4;
+    const t = Math.max(nextTime, ctx.currentTime + 0.05);
+    const tones = arpTones(chordDeg);
+    tones.forEach((m, i) => bell(t + i * sec16 * 2, m, 0.7, -0.5 + i * 0.25, 3));
+    bell(t + tones.length * sec16 * 2, tones[0] + 12, 0.9, 0, 4.5);
+    crash(t);
+    vq.push({ t: t, type: 'arrive' });
+  }
+
+  function pump() {
+    if (!running || !ctx) return;
+    if (nextTime < ctx.currentTime - 0.05) nextTime = ctx.currentTime + 0.05;
+    while (nextTime < ctx.currentTime + 0.15) {
+      const sec16 = 60 / bpmNow() / 4;
+      scheduleStep(nextTime, sec16);
+      nextTime += sec16; step++;
+    }
+    if (state.gear === 'D' && state.remaining <= 0 && !arrived) { arrived = true; scheduleChime(); }
+    if (state.remaining > 0) arrived = false;
+  }
+
+  let timer = null, fallbackTimer = null;
+  try {
+    const src = "let id=null;onmessage=function(e){if(e.data==='start'){if(id)clearInterval(id);id=setInterval(function(){postMessage(0)},25);}else{clearInterval(id);id=null;}};";
+    timer = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+    timer.onmessage = pump;
+    timer.onerror = () => { timer = null; if (running) startTimer(); };
+  } catch (e) { timer = null; }
+  function startTimer() { if (timer) timer.postMessage('start'); else fallbackTimer = setInterval(pump, 25); }
+  function stopTimer() { if (timer) timer.postMessage('stop'); if (fallbackTimer) { clearInterval(fallbackTimer); fallbackTimer = null; } }
+
+  function applyControls() {
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    N.rainG.gain.setTargetAtTime([0, 0.11, 0.2][state.wiper], now, 0.8);
+    N.rainLP.frequency.setTargetAtTime(state.wiper === 2 ? 6500 : 4200, now, 0.5);
+    N.brakeF.frequency.cancelScheduledValues(now);
+    N.brakeF.frequency.setValueAtTime(N.brakeF.frequency.value, now);
+    N.brakeF.frequency.setTargetAtTime(state.brake ? 650 : 18000, now, state.brake ? 0.07 : 0.35);
+    N.revOut.gain.setTargetAtTime((state.night ? 0.85 : 0.65) + state.wiper * 0.12 + (state.gear === 'P' ? 0.2 : 0), now, 0.6);
+  }
+
+  async function startAudio() {
+    if (!ctx) initAudio();
+    await ctx.resume();
+    running = true;
+    step = 0; barCount = -1; arpIdx = 0;
+    nextTime = ctx.currentTime + 0.08;
+    const now = ctx.currentTime;
+    N.master.gain.cancelScheduledValues(now); N.master.gain.setValueAtTime(N.master.gain.value, now); N.master.gain.linearRampToValueAtTime(0.85, now + 0.6);
+    applyControls();
+    startTimer();
+    renderPower();
+  }
+  function stopAudio() {
+    running = false; stopTimer(); vq.length = 0;
+    if (ctx) {
+      const now = ctx.currentTime;
+      N.master.gain.cancelScheduledValues(now); N.master.gain.setValueAtTime(N.master.gain.value, now); N.master.gain.linearRampToValueAtTime(0, now + 0.35);
+      setTimeout(() => { if (!running && ctx) ctx.suspend(); }, 420);
+    }
+    beatOn = -1; lampUntil = 0;
+    renderPower();
+  }
+
+  // ---------- scenario ----------
+  const SCENE_LEN = 86, ARRIVE_AT = 70;
+  const SCENE = [
+    { t: 0, set: { gear: 'P', speed: 0, wiper: 0, turn: 0, brake: false }, cap: '주차 중 · 정차 앰비언트' },
+    { t: 5, set: { gear: 'D' }, cap: '기어 D · 출발' },
+    { t: 6, ramp: { speed: [0, 35, 7] } },
+    { t: 14, ramp: { speed: [35, 70, 6] }, cap: '시내 주행' },
+    { t: 20, set: { wiper: 1 }, cap: '비가 오기 시작 · 와이퍼 저속' },
+    { t: 27, set: { wiper: 2 }, ramp: { speed: [70, 92, 5] }, cap: '폭우 속 고속도로 · 와이퍼 고속' },
+    { t: 34, set: { turn: 1 }, cap: '오른쪽으로 차선 변경' },
+    { t: 40, set: { turn: 0 } },
+    { t: 43, set: { brake: true }, ramp: { speed: [92, 45, 3] }, cap: '앞차 감속 · 브레이크' },
+    { t: 46.5, set: { brake: false } },
+    { t: 47, set: { wiper: 1 }, cap: '비가 잦아듦 · 도착 빌드업 시작' },
+    { t: 53, set: { wiper: 0 }, cap: '비 그침 · 목적지가 가까워짐' },
+    { t: 58, set: { turn: -1 }, ramp: { speed: [45, 25, 4] }, cap: '좌회전 준비' },
+    { t: 64, set: { turn: 0 } },
+    { t: 66, ramp: { speed: [25, 0, 5] }, cap: '감속' },
+    { t: 70, cap: '도착 · 차임' },
+    { t: 74, set: { gear: 'P' }, cap: '기어 P · 주차' },
+    { t: SCENE_LEN, end: true }
+  ];
+  let scene = null;
+  const ease = (p) => p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+  const fmt = (s) => { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+
+  function startScene() {
+    scene = { t0: performance.now(), i: 0, ramps: [] };
+    state.remaining = 12;
+    if (!running) startAudio();
+    renderScene(0, SCENE[0].cap);
+  }
+  function stopScene(reason) {
+    if (!scene) return;
+    scene = null;
+    renderScene(null, reason === 'end' ? '시나리오 끝 · 다시 재생하거나 직접 조작해 보세요' : '직접 조작 모드');
+  }
+  function stepScene() {
+    if (!scene) return;
+    const sec = (performance.now() - scene.t0) / 1000;
+    let cap = null, changed = false;
+    while (scene.i < SCENE.length && SCENE[scene.i].t <= sec) {
+      const ev = SCENE[scene.i++];
+      if (ev.set) { Object.assign(state, ev.set); changed = true; }
+      if (ev.ramp) for (const k in ev.ramp) { const r = ev.ramp[k]; scene.ramps.push({ k: k, from: r[0], to: r[1], t0: ev.t, dur: r[2] }); }
+      if (ev.cap) cap = ev.cap;
+      if (ev.end) { stopScene('end'); render(); return; }
+    }
+    scene.ramps = scene.ramps.filter((r) => { const p = clamp((sec - r.t0) / r.dur, 0, 1); state[r.k] = Math.round(r.from + (r.to - r.from) * ease(p)); return p < 1; });
+    state.remaining = Math.max(0, Math.round(12 * (1 - sec / ARRIVE_AT) * 10) / 10);
+    if (changed) applyControls();
+    renderScene(sec, cap);
+    render();
+  }
+
+  // ---------- UI ----------
+  const el = {
+    power: $('#power'), powerLabel: $('#power-label'), sceneBtn: $('#scene-btn'), sceneLabel: $('#scene-label'), sceneIcon: $('#scene-icon'),
+    sceneCap: $('#scene-cap'), sceneBar: $('#scene-bar'), sceneTime: $('#scene-time'),
+    bpm: $('#st-bpm'), chord: $('#st-chord'), bar: $('#st-bar'), mode: $('#st-mode'), beats: document.querySelectorAll('.beats i'),
+    speed: $('#speed'), speedVal: $('#speed-val'), speedNote: $('#speed-note'), remain: $('#remain'), remainVal: $('#remain-val'), remainUnit: $('#remain-unit'),
+    brake: $('#brake'), scope: $('#scope'), hint: $('#scope-hint'), layers: $('#layer-list')
+  };
+  const setText = (node, v) => { v = String(v); if (node.textContent !== v) node.textContent = v; };
+  const setPressed = (node, on) => { const v = on ? 'true' : 'false'; if (node.getAttribute('aria-pressed') !== v) node.setAttribute('aria-pressed', v); };
+
+  const LAYERS = [
+    ['pad', '패드', '시간대 · 코드'], ['bass', '베이스', '속도'], ['drums', '드럼', '속도 · 브레이크'], ['arp', '아르페지오', '도착까지 남은 시간'],
+    ['rain', '빗소리 · 빗방울', '와이퍼'], ['wiper', '와이퍼 스윕', '와이퍼 주기'], ['turn', '깜빡이 틱톡', '방향지시등'], ['bell', '차임', '정차 · 도착']
+  ];
+  el.layers.innerHTML = LAYERS.map((l) => '<li class="layer" data-k="' + l[0] + '"><div class="layer-name"><b>' + l[1] + '</b><span>' + l[2] + '</span></div><div class="meter"><i></i></div></li>').join('');
+  const meterEls = {};
+  el.layers.querySelectorAll('.layer').forEach((li) => { meterEls[li.dataset.k] = li.querySelector('.meter i'); });
+
+  let lastLevel = null, lastPct = {};
+  function setRangeFill(input) {
+    const p = ((input.value - input.min) / (input.max - input.min)) * 100;
+    if (lastPct[input.id] !== p) { input.style.setProperty('--p', p + '%'); lastPct[input.id] = p; }
+  }
+  function render() {
+    setPressed($('#gear-p'), state.gear === 'P'); setPressed($('#gear-d'), state.gear === 'D');
+    setPressed($('#tod-day'), !state.night); setPressed($('#tod-night'), state.night);
+    [0, 1, 2].forEach((w) => setPressed($('#wiper-' + w), state.wiper === w));
+    setPressed($('#turn-l'), state.turn === -1); setPressed($('#turn-0'), state.turn === 0); setPressed($('#turn-r'), state.turn === 1);
+    setPressed(el.brake, state.brake);
+    if (+el.speed.value !== state.speed) el.speed.value = state.speed;
+    setText(el.speedVal, Math.round(state.speed));
+    setRangeFill(el.speed);
+    const lv = level();
+    if (lv !== lastLevel) { el.speedNote.innerHTML = lv < 0 ? '기어 P · 리듬 없이 패드와 차임만' : '리듬 단계 ' + LEVEL_NOTE[lv]; lastLevel = lv; }
+    if (+el.remain.value !== state.remaining) el.remain.value = state.remaining;
+    setRangeFill(el.remain);
+    if (state.remaining <= 0) { setText(el.remainVal, '도착'); setText(el.remainUnit, ''); }
+    else { setText(el.remainVal, state.remaining.toFixed(1)); setText(el.remainUnit, '분'); }
+    setText(el.bpm, Math.round(bpmNow()));
+    setText(el.mode, state.night ? '밤 · 단조' : '낮 · 장조');
+    if (!running || chordName === null) setText(el.chord, CHORDS[state.night ? 'night' : 'day'][0]);
+    const blinkCss = !running && state.turn !== 0;
+    $('#turn-l').classList.toggle('blink-css', blinkCss && state.turn === -1);
+    $('#turn-r').classList.toggle('blink-css', blinkCss && state.turn === 1);
+  }
+  function renderPower() {
+    setPressed(el.power, running);
+    setText(el.powerLabel, running ? '소리 끄기' : '소리 켜기');
+    el.hint.hidden = running;
+    render();
+  }
+  function renderScene(t, cap) {
+    const on = !!scene;
+    setPressed(el.sceneBtn, on);
+    setText(el.sceneLabel, on ? '시나리오 정지' : '시나리오 재생');
+    el.sceneIcon.setAttribute('d', on ? 'M7 6h4v12H7zM13 6h4v12h-4z' : 'M8 5.5v13l10.5-6.5z');
+    if (cap) el.sceneCap.innerHTML = '<b>' + cap + '</b>';
+    const p = t === null ? 0 : clamp(t / SCENE_LEN, 0, 1);
+    el.sceneBar.style.transform = 'scaleX(' + p + ')';
+    setText(el.sceneTime, fmt(t === null ? 0 : t) + ' / ' + fmt(SCENE_LEN));
+  }
+
+  function manual() { if (scene) stopScene('manual'); }
+  document.querySelectorAll('[data-gear]').forEach((b) => b.addEventListener('click', () => { manual(); state.gear = b.dataset.gear; applyControls(); render(); }));
+  document.querySelectorAll('[data-night]').forEach((b) => b.addEventListener('click', () => { manual(); state.night = b.dataset.night === '1'; applyControls(); render(); }));
+  document.querySelectorAll('[data-wiper]').forEach((b) => b.addEventListener('click', () => { manual(); state.wiper = +b.dataset.wiper; applyControls(); render(); }));
+  document.querySelectorAll('[data-turn]').forEach((b) => b.addEventListener('click', () => { manual(); state.turn = +b.dataset.turn; render(); }));
+  el.speed.addEventListener('input', () => { manual(); state.speed = +el.speed.value; render(); });
+  el.remain.addEventListener('input', () => { manual(); state.remaining = +el.remain.value; render(); });
+
+  function brakeOn(e) { if (e) e.preventDefault(); manual(); if (!state.brake) { state.brake = true; applyControls(); render(); } }
+  function brakeOff() { if (state.brake) { state.brake = false; applyControls(); render(); } }
+  el.brake.addEventListener('pointerdown', (e) => { try { el.brake.setPointerCapture(e.pointerId); } catch (x) {} brakeOn(e); });
+  el.brake.addEventListener('pointerup', brakeOff);
+  el.brake.addEventListener('pointercancel', brakeOff);
+  el.brake.addEventListener('lostpointercapture', brakeOff);
+  el.brake.addEventListener('contextmenu', (e) => e.preventDefault());
+  el.brake.addEventListener('keydown', (e) => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) brakeOn(e); });
+  el.brake.addEventListener('keyup', (e) => { if (e.key === ' ' || e.key === 'Enter') brakeOff(); });
+  el.brake.addEventListener('blur', brakeOff);
+
+  el.power.addEventListener('click', () => { if (running) { stopScene('manual'); stopAudio(); } else startAudio(); });
+  el.sceneBtn.addEventListener('click', () => { if (scene) stopScene('manual'); else startScene(); });
+
+  // ---------- scope + meters ----------
+  const c2 = el.scope.getContext('2d');
+  let buf = null, dpr = 1;
+  function sizeCanvas() {
+    const r = el.scope.getBoundingClientRect();
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    el.scope.width = Math.max(1, Math.round(r.width * dpr));
+    el.scope.height = Math.max(1, Math.round(r.height * dpr));
+  }
+  window.addEventListener('resize', sizeCanvas);
+  sizeCanvas();
+
+  function drawScope() {
+    const W = el.scope.width, H = el.scope.height, cs = getComputedStyle(document.documentElement);
+    const line = cs.getPropertyValue('--line').trim(), amber = cs.getPropertyValue('--amber').trim(), rain = cs.getPropertyValue('--rain').trim();
+    c2.clearRect(0, 0, W, H);
+    c2.strokeStyle = line; c2.lineWidth = 1;
+    for (let i = 1; i < 8; i++) { const x = Math.round(W * i / 8) + 0.5; c2.beginPath(); c2.moveTo(x, 0); c2.lineTo(x, H); c2.stroke(); }
+    c2.beginPath(); c2.moveTo(0, Math.round(H / 2) + 0.5); c2.lineTo(W, Math.round(H / 2) + 0.5); c2.stroke();
+    c2.lineWidth = 2 * dpr; c2.lineJoin = 'round';
+    c2.strokeStyle = state.brake ? cs.getPropertyValue('--brake').trim() : (state.wiper > 0 ? rain : amber);
+    c2.beginPath();
+    if (running && ctx) {
+      if (!buf) buf = new Float32Array(N.analyser.fftSize);
+      N.analyser.getFloatTimeDomainData(buf);
+      let start = 0;
+      for (let i = 1; i < buf.length / 2; i++) { if (buf[i - 1] < 0 && buf[i] >= 0) { start = i; break; } }
+      const span = Math.floor(buf.length / 2);
+      for (let i = 0; i < span; i++) {
+        const x = (i / (span - 1)) * W, y = H / 2 - buf[start + i] * H * 0.9;
+        if (i === 0) c2.moveTo(x, y); else c2.lineTo(x, y);
+      }
+    } else { c2.moveTo(0, H / 2); c2.lineTo(W, H / 2); }
+    c2.stroke();
+  }
+
+  function frame() {
+    stepScene();
+    pump();
+    const now = ctx ? ctx.currentTime : 0;
+    if (vq.length) {
+      const keep = [];
+      for (const e of vq) {
+        if (e.t > now) { keep.push(e); continue; }
+        if (e.type === 'meter') meters[e.k] = Math.max(meters[e.k], e.v);
+        else if (e.type === 'bar') { chordName = e.chord; setText(el.chord, e.chord); barShown = e.bar; setText(el.bar, e.bar); }
+        else if (e.type === 'beat') beatOn = e.n;
+        else if (e.type === 'blink') lampUntil = e.t + e.dur;
+        else if (e.type === 'arrive') arriveFlashUntil = e.t + 2;
+      }
+      vq.length = 0; Array.prototype.push.apply(vq, keep);
+    }
+    const base = { pad: running ? 0.7 : 0, rain: running ? [0, 0.4, 0.7][state.wiper] : 0 };
+    for (const k in meters) {
+      meters[k] = Math.max(base[k] || 0, meters[k] * 0.9);
+      if (!running && meters[k] < 0.01) meters[k] = 0;
+      meterEls[k].style.transform = 'scaleX(' + meters[k].toFixed(3) + ')';
+    }
+    el.beats.forEach((b, i) => b.classList.toggle('on', running && i === beatOn));
+    const lit = running && now < lampUntil;
+    $('#turn-l').classList.toggle('lit', lit && state.turn === -1);
+    $('#turn-r').classList.toggle('lit', lit && state.turn === 1);
+    if (running && now < arriveFlashUntil) setText(el.remainVal, '도착');
+    drawScope();
+    requestAnimationFrame(frame);
+  }
+
+  render();
+  renderPower();
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "id": "ambient_pop",
+  "name": "기본 · 앰비언트 팝",
+  "subtitle": "낮엔 D장조, 밤엔 D에올리안",
+  "modes": {
+    "day":   { "scale": [0, 2, 4, 5, 7, 9, 11], "progression": [0, 3, 5, 4], "chords": ["Dmaj7", "Gmaj7", "Bm7", "A7"] },
+    "night": { "scale": [0, 2, 3, 5, 7, 8, 10], "progression": [0, 5, 2, 6], "chords": ["Dm7", "B♭maj7", "Fmaj7", "C7"] }
+  },
+  "tempo": { "park": 66, "base": 74, "perKmh": 0.3, "maxKmh": 120 },
+  "levels": { "slowBelow": 5, "cityBelow": 35, "highwayBelow": 75 },
+  "roots": { "pad": 50, "bass": 38, "arp": 62, "drop": 74 },
+  "patterns": {
+    "bass": { "0": [0], "1": [0, 8], "2": [0, 6, 8, 14], "3": [0, 2, 4, 6, 8, 10, 12, 14] },
+    "kick": { "1": [0, 8], "2": [0, 8, 10], "3": [0, 4, 8, 12] }
+  }
+}

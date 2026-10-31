@@ -1,0 +1,20 @@
+# Gradle / Android Studio
+.gradle/
+build/
+/app/build/
+local.properties
+.idea/
+*.iml
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# 개인 자료 — 저장소에 올리지 않음
+HANDOFF.md
+*.docx
+START_PROMPT.txt
+
+# 서명 키
+*.jks
+*.keystore

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-feature
+        android:name="android.hardware.type.automotive"
+        android:required="true" />
+
+    <!-- Pleos Vehicle SDK: 사용하는 API의 최소 권한만 선언 (읽기 전용) -->
+    <uses-permission android:name="pleos.car.permission.CAR_WINDOWS" />  <!-- 와이퍼 -->
+    <uses-permission android:name="pleos.car.permission.CAR_LIGHTS" />   <!-- 방향지시등 -->
+    <uses-permission android:name="pleos.car.permission.CAR_DRIVE" />    <!-- 브레이크 페달 -->
+
+    <!-- AAOS 표준 차량 속성: 속도(PERF_VEHICLE_SPEED), 기어(GEAR_SELECTION) -->
+    <uses-permission android:name="android.car.permission.CAR_SPEED" />
+    <uses-permission android:name="android.car.permission.CAR_POWERTRAIN" />
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        android:allowBackup="false"
+        android:appCategory="audio"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Drivescape">
+
+        <meta-data
+            android:name="com.android.automotive"
+            android:resource="@xml/automotive_app_desc" />
+        <meta-data
+            android:name="androidx.car.app.launchable"
+            android:value="true" />
+
+        <uses-library
+            android:name="android.car"
+            android:required="false" />
+
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="unspecified">
+            <!-- 주행 중에는 재생·정지·세트 넘기기만 보이도록 앱이 직접 UI를 줄인다 -->
+            <meta-data
+                android:name="distractionOptimized"
+                android:value="true" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".playback.DrivescapeService"
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback">
+            <!-- 자체 화면(런처 액티비티)이 있는 앱도 시스템 미디어 센터·미디어 위젯에 MBS를 노출하도록 opt-in.
+                 Pleos 미디어 앱(ai.umos.mediaapp)은 서비스 단위의 이 값이 없으면 "non media template app"으로 건너뛴다. -->
+            <meta-data
+                android:name="androidx.car.app.launchable"
+                android:value="true" />
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name="androidx.media.session.MediaButtonReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

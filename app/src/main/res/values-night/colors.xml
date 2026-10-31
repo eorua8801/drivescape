@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 밤(다크) 팔레트: 차량이 야간 모드일 때 눈부시지 않도록 -->
+<resources>
+    <color name="bg">#0E1116</color>
+    <color name="panel">#171C23</color>
+    <color name="chip">#212833</color>
+    <color name="line">#2A313C</color>
+    <color name="ink">#E8EDF3</color>
+    <color name="ink_dim">#8B96A5</color>
+
+    <color name="amber">#F2A541</color>
+    <color name="amber_text">#F2A541</color>
+    <color name="on_accent">#1C1406</color>
+    <color name="rain">#6CB4EE</color>
+    <color name="brake">#EB6A60</color>
+    <color name="ok">#4CC38A</color>
+    <color name="arp">#A58BFA</color>
+</resources>

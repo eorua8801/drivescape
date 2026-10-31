@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Drivescape</string>
+    <string name="tagline">주행이 작곡하는 음악</string>
+    <string name="play">재생</string>
+    <string name="stop">정지</string>
+    <string name="next_set">다음 세트</string>
+    <string name="channel_name">Drivescape 재생</string>
+    <string name="scenario_play">데모 시나리오 재생</string>
+    <string name="scenario_stop">시나리오 정지</string>
+    <string name="parked_only">정차 중 메뉴 · 시간대</string>
+    <string name="driving_notice">주행 중 · 재생 조작만 표시합니다</string>
+</resources>
