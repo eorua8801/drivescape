@@ -219,6 +219,8 @@ class DelayLine(maxSec: Double) {
         val d = min(max(delaySec * SR, 1.0), (size - 3).toDouble())
         var p = w - d
         if (p < 0) p += size
+        // p가 0보다 아주 조금 작으면(-1e-13 등) size를 더한 값이 반올림으로 size와 같아질 수 있다 → 배열 밖
+        if (p >= size) p -= size
         val i = p.toInt(); val f = (p - i).toFloat()
         val j = if (i + 1 >= size) 0 else i + 1
         outL = l[i] + (l[j] - l[i]) * f

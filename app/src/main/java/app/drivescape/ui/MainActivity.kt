@@ -528,25 +528,29 @@ class MainActivity : Activity() {
             else -> getString(R.string.idle_hint).substringBefore('\n')
         })
 
-        liveRight.visibility = if (restricted) View.GONE else View.VISIBLE
-        caption.visibility = if (restricted) View.GONE else View.VISIBLE
-        driveCaption.visibility = if (restricted) View.VISIBLE else View.GONE
-        driveStrip.visibility = if (restricted) View.VISIBLE else View.GONE
-        if (restricted) {
-            setText(driveCaptionText, reaction.replace("  ·  ", "\n"))
-            for ((k, c) in stripCells) setText(c.value, valueOf(k, st, lampLit, arriving))
-        }
-
-        // 시연 자막: 세트가 바뀌면 3초 동안 세트 이름을 위에 띄운다 (주행 중엔 큰 자막이 이미 있으므로 숨김)
+        // 세트가 바뀌면 3초 동안 자막 제목에 새 세트 이름을 띄운다
         val nowMs = android.os.SystemClock.uptimeMillis()
         if (set != null && set.id != lastSetId) {
             if (lastSetId != null) setNoticeUntil = nowMs + 3000
             lastSetId = set.id
         }
+        val captionTitle = if (nowMs < setNoticeUntil) "세트 → ${set?.look?.title ?: ""}" else "지금 음악이 반응하는 것"
+
+        liveRight.visibility = if (restricted) View.GONE else View.VISIBLE
+        caption.visibility = if (restricted) View.GONE else View.VISIBLE
+        driveCaption.visibility = if (restricted) View.VISIBLE else View.GONE
+        driveStrip.visibility = if (restricted) View.VISIBLE else View.GONE
+        if (restricted) {
+            setText(driveCaptionLabel, captionTitle)
+            setText(driveCaptionText, reaction.replace("  ·  ", "\n"))
+            for ((k, c) in stripCells) setText(c.value, valueOf(k, st, lampLit, arriving))
+        }
+
+        // 시연 자막 (주행 중엔 큰 자막이 이미 있으므로 숨김)
         val showDemo = DriveHub.demoCaptions && running && !restricted
         demoOverlay.visibility = if (showDemo) View.VISIBLE else View.GONE
         if (showDemo) {
-            setText(demoTitle, if (nowMs < setNoticeUntil) "세트 → ${set?.look?.title ?: ""}" else "지금 음악이 반응하는 것")
+            setText(demoTitle, captionTitle)
             setText(demoCaption, reaction.replace("  ·  ", "\n"))
         }
 

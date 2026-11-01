@@ -66,9 +66,15 @@ function Ramp([double]$from, [double]$to, [double]$sec) {
     }
 }
 
+# 화면 좌표 (Pleos Connect Emulator 2560x1440 기준)
+function Tap([int]$x, [int]$y) { & $adb shell input tap $x $y | Out-Null }
+# 홈 화면 TaskView가 앱을 빈 화면으로 보여 줄 때가 있어, 다른 앱(차량)으로 갔다가 하단 독의 Drivescape로 돌아와 다시 그리게 한다
+function Refresh { Tap 1038 1370; Start-Sleep -Seconds 2; Tap 1520 1370; Start-Sleep -Seconds 2 }
+
 # ---- 준비 ----
 & $adb forward tcp:8088 tcp:8088 | Out-Null
 Gear 'Park'; $script:speed = 0; Brake 0; Wiper 'Off'; Turn 'Off'
+& $adb shell cmd car_service day-night-mode day | Out-Null
 Front
 & $adb shell input keyevent KEYCODE_MEDIA_PAUSE | Out-Null
 # 녹화에 앱 본래 음량이 담기도록 차량 미디어 볼륨(존 0, 그룹 0)을 최대로
@@ -76,6 +82,7 @@ Front
 App @('--es', 'cmd', 'set', '--es', 'id', 'ambient_pop')
 App @('--es', 'cmd', 'day')
 App @('--es', 'cmd', 'demo_on')
+Refresh
 for ($i = 0; $i -lt 6; $i++) { Beat; Start-Sleep -Milliseconds 500 }
 
 if (-not $NoRecord) {
@@ -87,7 +94,8 @@ if (-not $NoRecord) {
 $clock.Start()
 
 # ---- 주행 대본 ----
-At 2;    Say '재생 (스티어링 휠 미디어 키와 같은 신호)'; & $adb shell input keyevent KEYCODE_MEDIA_PLAY | Out-Null
+At 2.5;  Say '세트 고르기 열기'; Tap 1300 1176
+At 5.5;  Say '이 세트로 재생'; Tap 2320 1210
 At 9;    Say '기어 D · 출발'; Gear 'Drive'
 At 10;   Ramp 0 40 6
 At 17;   Say '시내 → 고속'; Ramp 40 80 6
@@ -116,6 +124,7 @@ if (-not $NoRecord) {
 }
 App @('--es', 'cmd', 'demo_off')
 App @('--es', 'cmd', 'auto')
+& $adb shell cmd car_service day-night-mode sensor | Out-Null
 # 에뮬레이터 차는 움직이지 않아 경로가 끝나지 않고, "안내 종료"·cancelRoute도 멈춰 있는 경우가 있어 내비 앱을 다시 시작해 경로를 지운다.
 # (다시 시작한 직후 한동안은 화면 녹화에 깜빡임이 생길 수 있으니, 다음 녹화는 30초쯤 뒤에)
 & $adb shell am force-stop ai.umos.maps.android.navigation.app | Out-Null

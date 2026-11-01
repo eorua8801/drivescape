@@ -8,20 +8,20 @@
 
 ## 화면
 
-Pleos Connect Emulator v2.1.0에서 실제 차량 신호(Virtual Console)와 내비 경로로 동작하는 모습입니다.
+Pleos Connect Emulator v2.1.0에서 실제 차량 신호(Virtual Console)로 동작하는 모습입니다.
 
-| 비 오는 고속도로 · 시티팝 | 도착 1분 전 · 로파이 | 밤 · 주차 |
+| 재생 전 첫 화면 (낮) | 세트 고르기 (정차 중) | 주행 중 간단 화면 (밤 · 비) |
 |---|---|---|
-| ![고속 주행과 와이퍼 고속에 반응하는 화면](docs/images/drive_rain_citypop.png) | ![내비 남은 시간 1분, 음악이 고조되는 화면](docs/images/arrival_navi_lofi.png) | ![차량 야간 모드에 맞춘 어두운 화면](docs/images/night_parked_lofi.png) |
-| 88 km/h → 115 BPM 달리는 리듬, 와이퍼 고속 → 굵은 빗소리(파형이 파란색) | 내비 연동 남은 시간 1.0분 → 아르페지오가 촘촘해지며 고조 | 차량이 야간 모드면 화면도 어둡게, 주차 중엔 리듬 없이 잔잔하게 |
+| ![세트 커버와 재생 버튼, 지금 차 상태, 반응 안내가 있는 첫 화면](docs/images/home_day_citypop.png) | ![세트 커버 카드 5장, 국악 퓨전과 키즈는 준비 중](docs/images/set_picker.png) | ![주행 중 큰 반응 자막과 차 상태 4칸만 남은 화면](docs/images/driving_night_rain.png) |
+| 지금 세트의 커버·이름과 큰 재생 버튼, 차 상태, 신호별 반응 안내 | 세트마다 커버와 대표색. 재생 중이면 다음 마디부터 바뀜 | 92 km/h → 116 BPM 달리는 리듬, 와이퍼 고속 → 굵은 빗소리. 주행 중엔 큰 자막과 버튼 2개만 |
 
-화면 아래 한 줄(또는 시연 모드의 큰 자막)은 **지금 음악이 무엇에 반응하고 있는지**를 알려 줍니다. 앱 제목을 길게 누르면 시연 자막이 켜집니다.
+**지금 음악이 무엇에 반응하고 있는지**를 화면에 문장으로 보여 줍니다(주행 중에는 큰 자막). 앱 제목을 길게 누르면 정차 중 화면에도 시연용 큰 자막이 켜집니다.
 
 ## APK
 
 | 파일 | 설명 |
 |---|---|
-| [`apk/Drivescape_Drivescape_release.apk`](apk/Drivescape_Drivescape_release.apk) | release 빌드 (versionName 0.4.0) |
+| [`apk/Drivescape_Drivescape_release.apk`](apk/Drivescape_Drivescape_release.apk) | release 빌드 (versionName 0.4.1) |
 
 > 공모전 시연용으로 release 빌드를 Android 디버그 키로 서명했습니다. 정식 배포 시에는 별도 서명 키로 교체합니다.
 
@@ -46,7 +46,7 @@ adb forward tcp:8088 tcp:8088
 PC 브라우저에서 `http://127.0.0.1:8088/` 을 열고 기어(D), ACCEL/BRAKE 페달, FRONT WIPER, Emulation Controls의 Turn Signal State를 바꾸면 음악이 바로 반응합니다.
 
 ### 4. 자동 시연 (선택)
-에뮬레이터에 debug 빌드를 설치한 상태에서 아래 스크립트를 실행하면 약 1분 45초 동안 정차 → 시내 → 빗속 고속도로 → 차선 변경 → 브레이크 → 세트 전환(로파이·시티팝) → 내비 목적지 1분 전 → 도착 → 주차 순으로 실제 차량 신호를 바꾸면서, 시연 자막과 함께 에뮬레이터 화면과 소리를 녹화합니다(Windows).
+에뮬레이터에 debug 빌드를 설치한 상태에서 아래 스크립트를 실행하면 약 1분 45초 동안 첫 화면·세트 고르기 → 시내 → 빗속 고속도로 → 차선 변경 → 브레이크 → 세트 전환(로파이·시티팝) → 내비 목적지 1분 전 → 도착 → 주차 순으로 실제 차량 신호를 바꾸면서, 시연 자막과 함께 에뮬레이터 화면과 소리를 녹화합니다(Windows).
 ```bash
 powershell -ExecutionPolicy Bypass -File tools/demo_drive.ps1
 ```
