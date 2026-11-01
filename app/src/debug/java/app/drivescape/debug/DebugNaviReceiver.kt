@@ -22,6 +22,9 @@ import app.drivescape.drive.DriveHub
  *   adb shell am broadcast -a app.drivescape.DEBUG_NAVI -n app.drivescape/.debug.DebugNaviReceiver --es cmd location
  *   ... --es cmd route --ef lat 37.40 --ef lon 127.10 --es name 테스트
  *   ... --es cmd state | cancel | arrive (에뮬레이터 차는 움직이지 않으므로 도착 이벤트를 흉내 냄)
+ *   ... --es cmd demo_on | demo_off (시연 자막. 앱 제목을 길게 눌러도 된다)
+ *   ... --es cmd set --es id lofi   (세트 고르기)
+ *   ... --es cmd day | night | auto (시간대 고정·자동)
  */
 class DebugNaviReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -33,6 +36,12 @@ class DebugNaviReceiver : BroadcastReceiver() {
             "state" -> { h.getRouteStateInfo(); h.getDestinationInfo() }
             "cancel" -> h.cancelRoute()
             "arrive" -> DriveHub.navi?.debugArrive()
+            "demo_on" -> DriveHub.demoCaptions = true
+            "demo_off" -> DriveHub.demoCaptions = false
+            "set" -> intent.getStringExtra("id")?.let { app.drivescape.playback.DrivescapeService.current?.selectSet(it) }
+            "day" -> DriveHub.nightOverride = false
+            "night" -> DriveHub.nightOverride = true
+            "auto" -> DriveHub.nightOverride = null
             "route" -> {
                 val lat = intent.getFloatExtra("lat", Float.NaN).toDouble()
                 val lon = intent.getFloatExtra("lon", Float.NaN).toDouble()

@@ -24,6 +24,7 @@ import app.drivescape.drive.Gear
 import app.drivescape.drive.Scenario
 import app.drivescape.drive.SignalStatus
 import app.drivescape.playback.DrivescapeService
+import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -52,6 +53,11 @@ class MainActivity : Activity() {
     private lateinit var todNight: TextView
     private lateinit var parkedPanel: View
     private lateinit var drivingNotice: View
+    private lateinit var demoOverlay: View
+    private lateinit var demoTitle: TextView
+    private lateinit var demoCaption: TextView
+    private var lastSetId: String? = null
+    private var setNoticeUntil = 0L
 
     /** 차량 신호 카드 하나 */
     private class SignalCell(val root: View) {
@@ -94,6 +100,13 @@ class MainActivity : Activity() {
         todNight = findViewById(R.id.tod_night)
         parkedPanel = findViewById(R.id.parked_panel)
         drivingNotice = findViewById(R.id.driving_notice)
+        demoOverlay = findViewById(R.id.demo_overlay)
+        demoTitle = findViewById(R.id.demo_title)
+        demoCaption = findViewById(R.id.demo_caption)
+        // 제목을 길게 누르면 시연 자막을 켜고 끈다 (발표·영상 촬영용, 일반 사용자는 볼 일 없음)
+        findViewById<View>(R.id.app_title).setOnLongClickListener {
+            DriveHub.demoCaptions = !DriveHub.demoCaptions; true
+        }
 
         val grid = findViewById<GridLayout>(R.id.signals)
         for ((key, label) in listOf("gear" to "기어", "speed" to "속도", "wiper" to "와이퍼",
@@ -206,11 +219,26 @@ class MainActivity : Activity() {
         scope.invalidate()
 
         val sc = DriveHub.scenario
+        val arriving = running && now < arriveUntil
+        val reaction = reactionText(st, arriving)
         setText(caption, when {
             sc != null -> "시나리오 ${fmt(sc.elapsed)} / ${fmt(Scenario.LENGTH)} · ${sc.caption}"
-            running -> levelNote(st)
+            running -> reaction
             else -> "재생을 누르면 지금 주행에 맞춰 음악이 만들어집니다"
         })
+
+        // 시연 자막: 세트가 바뀌면 3초 동안 세트 이름을 위에 띄운다
+        val nowMs = android.os.SystemClock.uptimeMillis()
+        if (set != null && set.id != lastSetId) {
+            if (lastSetId != null) setNoticeUntil = nowMs + 3000
+            lastSetId = set.id
+        }
+        val showDemo = DriveHub.demoCaptions && running
+        demoOverlay.visibility = if (showDemo) View.VISIBLE else View.GONE
+        if (showDemo) {
+            setText(demoTitle, if (nowMs < setNoticeUntil) "세트 → ${set?.name ?: ""}" else "지금 음악이 반응하는 것")
+            setText(demoCaption, reaction.replace("  ·  ", "\n"))
+        }
         setText(scenarioBtn, getString(if (sc != null) R.string.scenario_stop else R.string.scenario_play))
         scenarioBtn.isSelected = sc != null
         val ov = DriveHub.nightOverride
@@ -262,15 +290,34 @@ class MainActivity : Activity() {
 
     private fun setText(v: TextView, s: String) { if (v.text.toString() != s) v.text = s }
 
-    private fun levelNote(st: DriveState): String {
-        if (st.gear == Gear.P) return "기어 P · 리듬 없이 패드와 차임만"
-        val l = DriveHub.currentSet?.levels ?: return ""
-        return "리듬 단계 · " + when {
-            st.speed < l.slowBelow -> "정지 · 베이스만 길게"
-            st.speed < l.cityBelow -> "저속 · 킥과 베이스 2분음표"
-            st.speed < l.highwayBelow -> "시내 · 킥과 스네어, 하이햇 8분음표"
-            else -> "고속 · 4박 킥, 하이햇 16분음표, 베이스 8분음표"
+    /**
+     * 지금 음악이 무엇에 반응하고 있는지 (세트와 무관하게 맞는 쉬운 말).
+     * 예: "고속 주행 → 달리는 리듬  ·  와이퍼 고속 → 굵은 빗소리"
+     */
+    private fun reactionText(st: DriveState, arriving: Boolean): String {
+        val parts = ArrayList<String>()
+        val l = DriveHub.currentSet?.levels
+        parts += when {
+            st.gear == Gear.P -> "주차 → 잔잔한 앰비언트"
+            l == null -> ""
+            st.speed < l.slowBelow -> "정지 → 베이스만 길게"
+            st.speed < l.cityBelow -> "저속 → 가벼운 리듬"
+            st.speed < l.highwayBelow -> "시내 주행 → 경쾌한 리듬"
+            else -> "고속 주행 → 달리는 리듬"
         }
+        if (st.brake) parts += "브레이크 → 소리를 줄이고 리듬을 덜어 냄"
+        when (st.wiper) {
+            1 -> parts += "와이퍼 → 빗소리"
+            2 -> parts += "와이퍼 고속 → 굵은 빗소리"
+        }
+        when (st.turn) {
+            -1 -> parts += "왼쪽 깜빡이 → 왼쪽에서 틱톡"
+            1 -> parts += "오른쪽 깜빡이 → 오른쪽에서 틱톡"
+        }
+        val rem = st.remainingMin
+        if (arriving || (rem != null && rem <= 0f && st.gear == Gear.D)) parts += "도착 → 차임"
+        else if (rem != null && rem <= 5f && st.gear == Gear.D) parts += "도착 ${ceil(rem).toInt()}분 전 → 음악이 고조"
+        return parts.filter { it.isNotEmpty() }.joinToString("  ·  ")
     }
 
     private fun fmt(sec: Double): String {

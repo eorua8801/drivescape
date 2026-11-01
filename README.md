@@ -6,11 +6,22 @@
 - 모든 음은 현재 스케일·코드 구성음 안에서만 나오므로, 어떤 신호가 와도 불협화음이 생기지 않습니다.
 - 앱은 인포테인먼트(AAOS)에서 실행되고 소리는 차량 실내 스피커로 나옵니다.
 
+## 화면
+
+Pleos Connect Emulator v2.1.0에서 실제 차량 신호(Virtual Console)와 내비 경로로 동작하는 모습입니다.
+
+| 비 오는 고속도로 · 시티팝 | 도착 1분 전 · 로파이 | 밤 · 주차 |
+|---|---|---|
+| ![고속 주행과 와이퍼 고속에 반응하는 화면](docs/images/drive_rain_citypop.png) | ![내비 남은 시간 1분, 음악이 고조되는 화면](docs/images/arrival_navi_lofi.png) | ![차량 야간 모드에 맞춘 어두운 화면](docs/images/night_parked_lofi.png) |
+| 88 km/h → 115 BPM 달리는 리듬, 와이퍼 고속 → 굵은 빗소리(파형이 파란색) | 내비 연동 남은 시간 1.0분 → 아르페지오가 촘촘해지며 고조 | 차량이 야간 모드면 화면도 어둡게, 주차 중엔 리듬 없이 잔잔하게 |
+
+화면 아래 한 줄(또는 시연 모드의 큰 자막)은 **지금 음악이 무엇에 반응하고 있는지**를 알려 줍니다. 앱 제목을 길게 누르면 시연 자막이 켜집니다.
+
 ## APK
 
 | 파일 | 설명 |
 |---|---|
-| [`apk/Drivescape_Drivescape_release.apk`](apk/Drivescape_Drivescape_release.apk) | release 빌드 (versionName 0.3.0) |
+| [`apk/Drivescape_Drivescape_release.apk`](apk/Drivescape_Drivescape_release.apk) | release 빌드 (versionName 0.3.1) |
 
 > 공모전 시연용으로 release 빌드를 Android 디버그 키로 서명했습니다. 정식 배포 시에는 별도 서명 키로 교체합니다.
 
@@ -35,7 +46,7 @@ adb forward tcp:8088 tcp:8088
 PC 브라우저에서 `http://127.0.0.1:8088/` 을 열고 기어(D), ACCEL/BRAKE 페달, FRONT WIPER, Emulation Controls의 Turn Signal State를 바꾸면 음악이 바로 반응합니다.
 
 ### 4. 자동 시연 (선택)
-에뮬레이터가 켜진 상태에서 아래 스크립트를 실행하면 약 90초 동안 정차 → 시내 → 빗속 고속도로 → 차선 변경 → 브레이크 → 주차 순으로 실제 차량 신호를 바꾸면서 에뮬레이터 화면과 소리를 녹화합니다(Windows).
+에뮬레이터에 debug 빌드를 설치한 상태에서 아래 스크립트를 실행하면 약 1분 45초 동안 정차 → 시내 → 빗속 고속도로 → 차선 변경 → 브레이크 → 세트 전환(로파이·시티팝) → 내비 목적지 1분 전 → 도착 → 주차 순으로 실제 차량 신호를 바꾸면서, 시연 자막과 함께 에뮬레이터 화면과 소리를 녹화합니다(Windows).
 ```bash
 powershell -ExecutionPolicy Bypass -File tools/demo_drive.ps1
 ```

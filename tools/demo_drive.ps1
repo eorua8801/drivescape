@@ -1,9 +1,10 @@
-﻿# Drivescape 시연용 자동 주행 스크립트
+﻿# Drivescape 시연용 자동 주행 스크립트 (약 1분 45초)
 #
 # Pleos Connect Emulator(2.1.0 이상)의 Virtual Console API로 실제 차량 신호(기어·속도·와이퍼·
-# 방향지시등·브레이크)를 바꾸면서, 에뮬레이터 화면과 소리를 함께 녹화한다.
+# 방향지시등·브레이크)를 바꾸고, 내비 경로를 걸어 도착 연출까지 보여 주면서 에뮬레이터 화면과 소리를 녹화한다.
 #
-# 준비: 에뮬레이터가 켜져 있고 Drivescape가 설치되어 있을 것.
+# 준비: 에뮬레이터가 켜져 있고 Drivescape **debug 빌드**가 설치되어 있을 것
+#       (시연 자막·세트 고르기·내비 경로는 debug 빌드의 테스트 훅을 쓴다)
 # 실행: powershell -ExecutionPolicy Bypass -File tools\demo_drive.ps1
 #       (녹화 없이 리허설만: -NoRecord)
 
@@ -36,6 +37,13 @@ $script:brake = 0
 function Controls { Post ("/vehicle/controls?speed={0}&accelerator=0&brake={1}" -f [int]$script:speed, [int]$script:brake) }
 function Brake([int]$pct) { $script:brake = $pct; Controls }
 
+# debug 빌드 테스트 훅 (DebugNaviReceiver)
+function App([string[]]$extra) {
+    & $adb shell am broadcast -a app.drivescape.DEBUG_NAVI -n app.drivescape/.debug.DebugNaviReceiver @extra | Out-Null
+}
+# am start는 이미 떠 있으면 stderr에 경고를 쓰는데, PowerShell 5.1은 이를 오류로 보므로 cmd로 감싼다
+function Front { cmd /c "`"$adb`" shell am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n app.drivescape/.ui.MainActivity >nul 2>&1" }
+
 $clock = [Diagnostics.Stopwatch]::new()
 function Say([string]$text) { Write-Host ("[{0,5:N1}s] {1}" -f $clock.Elapsed.TotalSeconds, $text) }
 function At([double]$t) {
@@ -61,44 +69,54 @@ function Ramp([double]$from, [double]$to, [double]$sec) {
 # ---- 준비 ----
 & $adb forward tcp:8088 tcp:8088 | Out-Null
 Gear 'Park'; $script:speed = 0; Brake 0; Wiper 'Off'; Turn 'Off'
-& $adb shell am start -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n app.drivescape/.ui.MainActivity | Out-Null
+Front
 & $adb shell input keyevent KEYCODE_MEDIA_PAUSE | Out-Null
 # 녹화에 앱 본래 음량이 담기도록 차량 미디어 볼륨(존 0, 그룹 0)을 최대로
 & $adb shell cmd car_service set-group-volume 0 0 100 | Out-Null
+App @('--es', 'cmd', 'set', '--es', 'id', 'ambient_pop')
+App @('--es', 'cmd', 'day')
+App @('--es', 'cmd', 'demo_on')
 for ($i = 0; $i -lt 6; $i++) { Beat; Start-Sleep -Milliseconds 500 }
 
 if (-not $NoRecord) {
     $Out = [IO.Path]::GetFullPath($Out)
     if (Test-Path $Out) { Remove-Item $Out }
-    & $adb emu screenrecord start --time-limit 110 $Out | Out-Null
+    & $adb emu screenrecord start --time-limit 150 $Out | Out-Null
     Write-Host "녹화 시작 → $Out"
 }
 $clock.Start()
 
-# ---- 주행 대본 (약 90초) ----
+# ---- 주행 대본 ----
 At 2;    Say '재생 (스티어링 휠 미디어 키와 같은 신호)'; & $adb shell input keyevent KEYCODE_MEDIA_PLAY | Out-Null
-At 3;    Say '주차 중 · 정차 앰비언트 (66 BPM, 리듬 없음)'
-At 11;   Say '기어 D · 출발'; Gear 'Drive'
-At 12;   Ramp 0 35 7
-At 20;   Say '시내 주행'; Ramp 35 70 6
-At 27;   Say '비가 오기 시작 · 와이퍼 저속'; Wiper 'Low'
-At 34;   Say '폭우 속 고속도로 · 와이퍼 고속'; Wiper 'High'; Ramp 70 95 5
-At 41;   Say '오른쪽으로 차선 변경 · 방향지시등'; Turn 'BlinkRight'
-At 47;   Turn 'Off'
-At 50;   Say '앞차 감속 · 브레이크'; Brake 70; Ramp 95 45 3
-At 54;   Brake 0
-At 56;   Say '비가 잦아듦'; Wiper 'Low'
-At 62;   Say '비 그침'; Wiper 'Off'
-At 65;   Say '좌회전 준비'; Turn 'BlinkLeft'; Ramp 45 25 4
-At 72;   Turn 'Off'
-At 74;   Say '감속 · 정차'; Ramp 25 0 5; Brake 40
-At 81;   Brake 0; Say '기어 P · 주차'; Gear 'Park'
-At 90;   Say '정지'; & $adb shell input keyevent KEYCODE_MEDIA_PAUSE | Out-Null
-At 92
+At 9;    Say '기어 D · 출발'; Gear 'Drive'
+At 10;   Ramp 0 40 6
+At 17;   Say '시내 → 고속'; Ramp 40 80 6
+At 23;   Say '비 · 와이퍼 저속'; Wiper 'Low'
+At 29;   Say '폭우 · 와이퍼 고속'; Wiper 'High'; Ramp 80 95 4
+At 35;   Say '오른쪽 차선 변경'; Turn 'BlinkRight'
+At 41;   Turn 'Off'
+At 44;   Say '앞차 감속 · 브레이크'; Brake 70; Ramp 95 50 3
+At 48;   Brake 0
+At 51;   Say '세트 → 로파이'; App @('--es', 'cmd', 'set', '--es', 'id', 'lofi'); Wiper 'Low'
+At 59;   Say '비 그침'; Wiper 'Off'
+At 64;   Say '세트 → 시티팝'; App @('--es', 'cmd', 'set', '--es', 'id', 'citypop'); Ramp 50 90 5
+At 75;   Say '내비 목적지 1분 전 → 고조'; App @('--es', 'cmd', 'route', '--ef', 'lat', '37.4131', '--ef', 'lon', '127.0950', '--es', 'name', 'Home')
+At 76.5; Front
+At 82;   Say '감속'; Ramp 90 35 5
+At 89;   Say '도착 → 차임'; App @('--es', 'cmd', 'arrive')
+At 92;   Ramp 35 0 4; Brake 40
+At 97;   Brake 0; Say '기어 P · 주차'; Gear 'Park'
+At 104;  Say '정지'; & $adb shell input keyevent KEYCODE_MEDIA_PAUSE | Out-Null
+At 106
 
 if (-not $NoRecord) {
     & $adb emu screenrecord stop | Out-Null
     Start-Sleep -Seconds 2
     Write-Host "녹화 완료 → $Out"
 }
+App @('--es', 'cmd', 'demo_off')
+App @('--es', 'cmd', 'auto')
+# 에뮬레이터 차는 움직이지 않아 경로가 끝나지 않고, "안내 종료"·cancelRoute도 멈춰 있는 경우가 있어 내비 앱을 다시 시작해 경로를 지운다.
+# (다시 시작한 직후 한동안은 화면 녹화에 깜빡임이 생길 수 있으니, 다음 녹화는 30초쯤 뒤에)
+& $adb shell am force-stop ai.umos.maps.android.navigation.app | Out-Null
 Say '끝'

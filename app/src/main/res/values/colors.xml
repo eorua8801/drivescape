@@ -15,4 +15,9 @@
     <color name="brake">#D8443B</color>
     <color name="ok">#23915A</color>
     <color name="arp">#7C5CE0</color>
+
+    <!-- 시연 자막 (낮/밤 공통으로 어두운 띠 위 흰 글씨) -->
+    <color name="caption_bg">#E616191E</color>
+    <color name="caption_text">#FFFFFF</color>
+    <color name="caption_accent">#F2A541</color>
 </resources>

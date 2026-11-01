@@ -27,6 +27,9 @@ object DriveHub {
     /** 주행 제한(CarUxRestrictions)으로 UI를 줄여야 하는지 */
     @Volatile var restricted = false; internal set
 
+    /** 시연 모드: 화면에 큰 자막으로 "지금 무엇에 반응하는지"를 보여 준다 (영상 촬영용) */
+    @Volatile var demoCaptions = false
+
     /** null = 시계로 자동, true/false = 정차 중 수동 지정 */
     @Volatile var nightOverride: Boolean? = null
 

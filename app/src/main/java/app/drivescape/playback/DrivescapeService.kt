@@ -121,6 +121,7 @@ class DrivescapeService : MediaBrowserServiceCompat() {
     }
 
     private val focusListener = AudioManager.OnAudioFocusChangeListener { focus ->
+        android.util.Log.i("DrivescapeService", "audio focus change: $focus (playing=${player.isPlaying}, resume=$resumeOnFocusGain)")
         when (focus) {
             AudioManager.AUDIOFOCUS_LOSS -> {
                 resumeOnFocusGain = false
@@ -179,6 +180,15 @@ class DrivescapeService : MediaBrowserServiceCompat() {
 
     fun switchSet(delta: Int) {
         DriveHub.nextSet(delta)
+        applySet()
+    }
+
+    /** 세트 ID로 바로 고른다 (미디어 ID 재생과 같은 동작, 재생 상태는 그대로) */
+    fun selectSet(id: String) {
+        if (DriveHub.selectSet(id)) applySet()
+    }
+
+    private fun applySet() {
         player.engine.soundSet = DriveHub.currentSet
         updateSession(if (player.isPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED)
         if (foreground) goForeground()
