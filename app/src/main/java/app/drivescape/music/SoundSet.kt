@@ -22,8 +22,38 @@ class SoundSet(
     /** 리듬 단계(1~3)별 킥 위치. 인덱스 0은 쓰지 않는다 */
     val kickPattern: Array<IntArray>,
     /** 음색·질감. 생략한 값은 기본 세트(웹 프로토타입)와 같은 소리 */
-    val style: Style = Style()
+    val style: Style = Style(),
+    /** 화면에 보이는 모습: 이름·커버·대표색 */
+    val look: Look = Look.from(name)
 ) {
+    /**
+     * 세트의 얼굴. 색은 0xAARRGGBB.
+     * [cover]는 앱에 그려 둔 커버 그림 이름(drawable `cover_<이름>`). 없으면 대표색으로 칠한 기본 커버를 쓴다.
+     */
+    class Look(
+        val title: String,
+        val sub: String,
+        val cover: String = "",
+        val chips: List<String> = emptyList(),
+        val accent: Int = 0xFFF08A24.toInt(),
+        val onAccent: Int = 0xFF1C1206.toInt(),
+        val labelDay: Int = 0xFFA9530C.toInt(),
+        val labelNight: Int = 0xFFF5A25A.toInt(),
+        val tintDay: Int = 0xFFFFF1E2.toInt(),
+        val tintNight: Int = 0xFF3A2614.toInt()
+    ) {
+        fun label(night: Boolean) = if (night) labelNight else labelDay
+        fun tint(night: Boolean) = if (night) tintNight else tintDay
+
+        companion object {
+            /** "시티팝 · 밤의 고속도로" → 제목 "시티팝", 부제 "밤의 고속도로" */
+            fun from(name: String): Look {
+                val parts = name.split(" · ", limit = 2)
+                return Look(parts[0], parts.getOrElse(1) { "" })
+            }
+        }
+    }
+
     /**
      * 세트별 음색 설정. 기본값 = 웹 프로토타입 수치.
      * 차량 신호에 대한 반응(빗소리·와이퍼·깜빡이·브레이크)은 모든 세트에 공통이다.
@@ -98,9 +128,10 @@ class SoundSet(
             val r = o.getJSONObject("roots")
             val modes = o.getJSONObject("modes")
             val pat = o.getJSONObject("patterns")
+            val name = o.getString("name")
             return SoundSet(
                 id = o.getString("id"),
-                name = o.getString("name"),
+                name = name,
                 subtitle = o.optString("subtitle"),
                 day = mode(modes.getJSONObject("day")),
                 night = mode(modes.getJSONObject("night")),
@@ -109,7 +140,27 @@ class SoundSet(
                 roots = Roots(r.getInt("pad"), r.getInt("bass"), r.getInt("arp"), r.getInt("drop")),
                 bassPattern = pattern(pat.getJSONObject("bass")),
                 kickPattern = pattern(pat.getJSONObject("kick")),
-                style = o.optJSONObject("style")?.let(::style) ?: Style()
+                style = o.optJSONObject("style")?.let(::style) ?: Style(),
+                look = o.optJSONObject("look")?.let { look(it, name) } ?: Look.from(name)
+            )
+        }
+
+        private fun look(j: JSONObject, name: String): Look {
+            val d = Look.from(name)
+            // android.graphics.Color은 단위 테스트(JVM)에서 쓸 수 없어서 직접 읽는다: "#RRGGBB" 또는 "#AARRGGBB"
+            fun color(k: String, def: Int): Int {
+                val s = j.optString(k).removePrefix("#")
+                if (s.isEmpty()) return def
+                val v = s.toLong(16)
+                return (if (s.length <= 6) v or 0xFF000000 else v).toInt()
+            }
+            val chips = j.optJSONArray("chips")?.let { a -> List(a.length()) { a.getString(it) } } ?: d.chips
+            return Look(
+                title = j.optString("title", d.title), sub = j.optString("sub", d.sub),
+                cover = j.optString("cover", d.cover), chips = chips,
+                accent = color("accent", d.accent), onAccent = color("onAccent", d.onAccent),
+                labelDay = color("labelDay", d.labelDay), labelNight = color("labelNight", d.labelNight),
+                tintDay = color("tintDay", d.tintDay), tintNight = color("tintNight", d.tintNight)
             )
         }
 

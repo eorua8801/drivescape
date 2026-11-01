@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 키즈 커버(추가 예정 세트): 구름 아래 작은 자동차와 음표 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="400dp"
+    android:viewportWidth="400"
+    android:viewportHeight="400">
+    <path android:fillColor="#E2F1FC" android:pathData="M0,0h400v400h-400z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M70,150 C70,120 104,108 124,124 C136,96 180,92 196,122 C222,110 252,126 248,152 C268,156 270,184 248,188 L86,188 C60,188 54,156 70,150 Z" />
+    <path android:fillColor="#FFC93C" android:pathData="M274,96 a26,26 0 1,0 52,0 a26,26 0 1,0 -52,0" />
+    <path android:fillColor="#FF6B6B" android:pathData="M80,250 a16,16 0 1,0 32,0 a16,16 0 1,0 -32,0 M110,196 h5 v54 h-5 z" />
+    <path android:fillColor="#3A9BE0" android:pathData="M300,212 a16,16 0 1,0 32,0 a16,16 0 1,0 -32,0 M330,158 h5 v54 h-5 z" />
+    <path android:fillColor="#7CC36E" android:pathData="M0,330h400v70h-400z" />
+    <path android:fillColor="#3A9BE0" android:pathData="M146,262 h114 a18,18 0 0,1 18,18 v18 a18,18 0 0,1 -18,18 h-114 a18,18 0 0,1 -18,-18 v-18 a18,18 0 0,1 18,-18 z M156,262 L176,230 L236,230 L258,262 Z" />
+    <path android:fillColor="#E2F1FC" android:pathData="M172,258 L186,238 L226,238 L240,258 Z" />
+    <path android:fillColor="#1C2A36" android:pathData="M146,318 a18,18 0 1,0 36,0 a18,18 0 1,0 -36,0 M226,318 a18,18 0 1,0 36,0 a18,18 0 1,0 -36,0" />
+    <path android:fillColor="#E2F1FC" android:pathData="M157,318 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0 M237,318 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+</vector>

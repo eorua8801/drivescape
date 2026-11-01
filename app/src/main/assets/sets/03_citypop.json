@@ -2,6 +2,11 @@
   "id": "citypop",
   "name": "시티팝 · 밤의 고속도로",
   "subtitle": "네 박 킥과 옥타브 베이스, 뒷박을 끊어 치는 건반",
+  "look": {
+    "title": "시티팝", "sub": "밤의 고속도로", "cover": "citypop",
+    "chips": ["96–122 BPM", "네 박 킥", "옥타브 베이스", "뒷박 건반"],
+    "accent": "#8B5CF6", "onAccent": "#FFFFFF", "labelDay": "#6236D9", "labelNight": "#B49BFA", "tintDay": "#EFE9FE", "tintNight": "#251B45"
+  },
   "modes": {
     "day":   { "scale": [0, 2, 4, 5, 7, 9, 11], "progression": [3, 4, 2, 5], "chords": ["Gmaj7", "A7", "F#m7", "Bm7"] },
     "night": { "scale": [0, 2, 3, 5, 7, 8, 10], "progression": [5, 4, 0, 3], "chords": ["B♭maj7", "Am7", "Dm7", "Gm7"] }

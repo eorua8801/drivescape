@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 앰비언트 팝 커버: 아침 해와 겹겹의 언덕 (디자인 시안 Cover.dc.html과 같은 도형) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="400dp"
+    android:viewportWidth="400"
+    android:viewportHeight="400">
+    <path android:fillColor="#FFEBD3" android:pathData="M0,0h400v400h-400z" />
+    <path android:strokeColor="#F6A456" android:strokeWidth="3" android:strokeAlpha="0.35"
+        android:pathData="M50,230 a150,150 0 1,0 300,0 a150,150 0 1,0 -300,0" />
+    <path android:strokeColor="#F6A456" android:strokeWidth="3" android:strokeAlpha="0.55"
+        android:pathData="M78,230 a122,122 0 1,0 244,0 a122,122 0 1,0 -244,0" />
+    <path android:fillColor="#F6A456" android:pathData="M108,230 a92,92 0 1,0 184,0 a92,92 0 1,0 -184,0" />
+    <path android:fillColor="#F7B878" android:pathData="M0,262 C70,236 130,250 200,262 C270,274 330,246 400,236 L400,400 L0,400 Z" />
+    <path android:fillColor="#F08A24" android:pathData="M0,300 C90,280 150,300 220,306 C300,312 350,292 400,286 L400,400 L0,400 Z" />
+    <path android:fillColor="#B85E14" android:pathData="M0,346 C100,330 190,352 260,350 C320,348 360,336 400,332 L400,400 L0,400 Z" />
+    <path android:fillColor="#FFEBD3" android:fillAlpha="0.55" android:pathData="M170,400 L196,320 L204,320 L230,400 Z" />
+</vector>

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 세트 고르기 화면의 세트 카드 하나. 테두리·배경은 코드에서 세트 색으로 칠한다 -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:layout_weight="1"
+    android:clickable="true"
+    android:focusable="true"
+    android:padding="18dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <ImageView
+            android:id="@+id/card_cover"
+            android:layout_width="match_parent"
+            android:layout_height="248dp"
+            android:background="@drawable/bg_cover"
+            android:importantForAccessibility="no"
+            android:scaleType="centerCrop" />
+
+        <TextView
+            android:id="@+id/card_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textColor="@color/ink"
+            android:textSize="32sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/card_sub"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/ink_dim"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/card_tempo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <app.drivescape.ui.FlowLayout
+            android:id="@+id/card_chips"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/card_badge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:layout_margin="14dp"
+        android:background="@drawable/bg_tag"
+        android:paddingStart="12dp"
+        android:paddingTop="5dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="5dp"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+</FrameLayout>

@@ -6,8 +6,11 @@
     <string name="stop">정지</string>
     <string name="next_set">다음 세트</string>
     <string name="channel_name">Drivescape 재생</string>
-    <string name="scenario_play">데모 시나리오 재생</string>
+    <string name="scenario_play">데모 시나리오</string>
     <string name="scenario_stop">시나리오 정지</string>
     <string name="parked_only">정차 중 메뉴 · 시간대</string>
-    <string name="driving_notice">주행 중 · 재생 조작만 표시합니다</string>
+    <string name="pick_set">세트 고르기</string>
+    <string name="play_this_set">이 세트로 재생</string>
+    <string name="picker_hint">정차 중에만 열려요 · 재생 중이면 다음 마디부터 바뀝니다</string>
+    <string name="idle_hint">재생을 누르면 지금 주행에 맞춰 음악이 만들어집니다.\n속도·와이퍼·깜빡이·브레이크·내비가 그대로 악보가 돼요.</string>
 </resources>

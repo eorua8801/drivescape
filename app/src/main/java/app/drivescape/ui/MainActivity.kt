@@ -6,13 +6,20 @@ import android.car.Car
 import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.content.res.Configuration
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.session.MediaControllerCompat
+import android.util.TypedValue
 import android.view.Choreographer
+import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.GridLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import app.drivescape.R
 import app.drivescape.audio.Layer
@@ -23,6 +30,7 @@ import app.drivescape.drive.DriveState
 import app.drivescape.drive.Gear
 import app.drivescape.drive.Scenario
 import app.drivescape.drive.SignalStatus
+import app.drivescape.music.SoundSet
 import app.drivescape.playback.DrivescapeService
 import kotlin.math.ceil
 import kotlin.math.max
@@ -30,42 +38,96 @@ import kotlin.math.roundToInt
 
 /**
  * 메인 화면. 재생 조작은 MediaController로 서비스에 보낸다 (스티어링 휠 키와 같은 경로).
- * 주행 중(CarUxRestrictions)에는 재생·정지, 세트 넘기기만 남긴다.
- * 색은 values(낮) / values-night(밤) 팔레트를 따르므로 차량의 주야간 모드에 맞춰 바뀐다.
+ * 세 가지 보기 중 하나만 보인다: 재생 전 첫 화면 / 재생 중 / 세트 고르기(정차 중).
+ * 주행 중(CarUxRestrictions)에는 재생·정지, 세트 넘기기와 큰 반응 자막만 남긴다.
+ * 바탕색은 values(낮) / values-night(밤) 팔레트, 강조색과 커버는 지금 세트의 look을 따른다.
  */
 class MainActivity : Activity() {
     private lateinit var browser: MediaBrowserCompat
     private var controller: MediaControllerCompat? = null
     private val player get() = DrivescapeService.player
 
+    // 머리줄
+    private lateinit var setChip: View
+    private lateinit var setThumb: ImageView
     private lateinit var setName: TextView
+    private lateinit var statusPill: TextView
+    private lateinit var mode: TextView
+
+    // 재생 전 첫 화면
+    private lateinit var idleView: View
+    private lateinit var heroCover: ImageView
+    private lateinit var heroLabel: TextView
+    private lateinit var heroTitle: TextView
+    private lateinit var heroSub: TextView
+    private lateinit var heroChips: ViewGroup
+    private lateinit var idlePlay: TextView
+    private lateinit var idlePicker: View
+    private lateinit var idleMenu: View
+    private lateinit var connDot: View
+    private lateinit var connText: TextView
+    private val reactIcons = ArrayList<ImageView>()
+
+    // 재생 중
+    private lateinit var liveView: View
+    private lateinit var liveRight: View
     private lateinit var bpm: TextView
     private lateinit var chord: TextView
-    private lateinit var mode: TextView
     private lateinit var beats: TextView
     private lateinit var caption: TextView
+    private lateinit var driveCaption: View
+    private lateinit var driveCaptionLabel: TextView
+    private lateinit var driveCaptionText: TextView
+    private lateinit var driveStrip: View
     private lateinit var scope: ScopeView
     private lateinit var meters: MeterView
     private lateinit var play: TextView
-    private lateinit var scenarioBtn: TextView
-    private lateinit var todAuto: TextView
-    private lateinit var todDay: TextView
-    private lateinit var todNight: TextView
-    private lateinit var parkedPanel: View
-    private lateinit var drivingNotice: View
     private lateinit var demoOverlay: View
     private lateinit var demoTitle: TextView
     private lateinit var demoCaption: TextView
+
+    // 세트 고르기
+    private lateinit var pickerView: View
+    private lateinit var pickerThumb: ImageView
+    private lateinit var pickerName: TextView
+    private lateinit var pickerGo: TextView
+    private var pickerOpen = false
+    private var pickedId: String? = null
+    private val pickerCards = ArrayList<PickerCard>()
+
+    /** 정차 중 메뉴는 재생 전·재생 중 화면에 하나씩 있다 */
+    private class ParkedMenu(root: View) {
+        val scenario: TextView = root.findViewById(R.id.scenario)
+        val auto: TextView = root.findViewById(R.id.tod_auto)
+        val day: TextView = root.findViewById(R.id.tod_day)
+        val night: TextView = root.findViewById(R.id.tod_night)
+    }
+    private val menus = ArrayList<ParkedMenu>()
+
     private var lastSetId: String? = null
     private var setNoticeUntil = 0L
+    private var styledFor: String? = null
+    private var scopeAccent = 0
 
-    /** 차량 신호 카드 하나 */
+    /** 차량 신호 칸 하나 (값 + 출처 꼬리표) */
     private class SignalCell(val root: View) {
         val label: TextView = root.findViewById(R.id.sig_label)
         val value: TextView = root.findViewById(R.id.sig_value)
-        val tag: TextView = root.findViewById(R.id.sig_tag)
+        val tag: TextView? = root.findViewById(R.id.sig_tag)
     }
+    /** 재생 중(정차) 오른쪽 6칸 */
     private val cells = LinkedHashMap<String, SignalCell>()
+    /** 재생 전 "지금 차 상태" 4칸 */
+    private val stateCells = LinkedHashMap<String, SignalCell>()
+    /** 주행 중 아래 4칸 */
+    private val stripCells = LinkedHashMap<String, SignalCell>()
+
+    /** 세트 고르기 카드. [set]이 null이면 아직 만들지 않은 세트(준비 중) */
+    private class PickerCard(val root: View, val id: String, val look: SoundSet.Look, val tempo: String, val set: SoundSet?) {
+        val badge: TextView = root.findViewById(R.id.card_badge)
+        val tempoView: TextView = root.findViewById(R.id.card_tempo)
+        val chips: ViewGroup = root.findViewById(R.id.card_chips)
+    }
 
     private var chordName: String? = null
     private var beatOn = -1
@@ -77,61 +139,120 @@ class MainActivity : Activity() {
     private val cOk by lazy { getColor(R.color.ok) }
     private val cRain by lazy { getColor(R.color.rain) }
     private val cBrake by lazy { getColor(R.color.brake) }
-    private val cAmber by lazy { getColor(R.color.amber) }
-    private val cAmberText by lazy { getColor(R.color.amber_text) }
+    private val cPanel by lazy { getColor(R.color.panel) }
+    private val cLine by lazy { getColor(R.color.line) }
+    private val uiNight get() =
+        (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         DriveHub.init(this)
         setContentView(R.layout.activity_main)
 
+        setChip = findViewById(R.id.set_chip)
+        setThumb = findViewById<ImageView>(R.id.set_thumb).also { it.clipToOutline = true }
         setName = findViewById(R.id.set_name)
+        statusPill = findViewById(R.id.status_pill)
+        mode = findViewById(R.id.mode)
+
+        idleView = findViewById(R.id.idle_view)
+        heroCover = findViewById<ImageView>(R.id.hero_cover).also { it.clipToOutline = true }
+        heroLabel = findViewById(R.id.hero_label)
+        heroTitle = findViewById(R.id.hero_title)
+        heroSub = findViewById(R.id.hero_sub)
+        heroChips = findViewById(R.id.hero_chips)
+        idlePlay = findViewById(R.id.idle_play)
+        idlePicker = findViewById(R.id.idle_picker)
+        idleMenu = findViewById(R.id.idle_menu)
+        connDot = findViewById(R.id.conn_dot)
+        connText = findViewById(R.id.conn_text)
+
+        liveView = findViewById(R.id.live_view)
+        liveRight = findViewById(R.id.live_right)
         bpm = findViewById(R.id.bpm)
         chord = findViewById(R.id.chord)
-        mode = findViewById(R.id.mode)
         beats = findViewById(R.id.beats)
         caption = findViewById(R.id.caption)
+        driveCaption = findViewById(R.id.drive_caption)
+        driveCaptionLabel = findViewById(R.id.drive_caption_label)
+        driveCaptionText = findViewById(R.id.drive_caption_text)
+        driveStrip = findViewById(R.id.drive_strip)
         scope = findViewById<ScopeView>(R.id.scope).also { it.engine = player.engine }
         meters = findViewById(R.id.meters)
         play = findViewById(R.id.play)
-        scenarioBtn = findViewById(R.id.scenario)
-        todAuto = findViewById(R.id.tod_auto)
-        todDay = findViewById(R.id.tod_day)
-        todNight = findViewById(R.id.tod_night)
-        parkedPanel = findViewById(R.id.parked_panel)
-        drivingNotice = findViewById(R.id.driving_notice)
         demoOverlay = findViewById(R.id.demo_overlay)
         demoTitle = findViewById(R.id.demo_title)
         demoCaption = findViewById(R.id.demo_caption)
+
+        pickerView = findViewById(R.id.picker_view)
+        pickerThumb = findViewById<ImageView>(R.id.picker_thumb).also { it.clipToOutline = true }
+        pickerName = findViewById(R.id.picker_name)
+        pickerGo = findViewById(R.id.picker_go)
+
         // 제목을 길게 누르면 시연 자막을 켜고 끈다 (발표·영상 촬영용, 일반 사용자는 볼 일 없음)
         findViewById<View>(R.id.app_title).setOnLongClickListener {
             DriveHub.demoCaptions = !DriveHub.demoCaptions; true
         }
 
         val grid = findViewById<GridLayout>(R.id.signals)
-        for ((key, label) in listOf("gear" to "기어", "speed" to "속도", "wiper" to "와이퍼",
-                                    "turn" to "방향지시등", "brake" to "브레이크", "arrive" to "도착까지")) {
+        for ((key, label) in SIGNALS) {
             val v = layoutInflater.inflate(R.layout.item_signal, grid, false)
             grid.addView(v)
             cells[key] = SignalCell(v).also { it.label.text = label }
         }
-
-        play.setOnClickListener {
-            val tc = controller?.transportControls ?: return@setOnClickListener
-            if (player.isPlaying) tc.pause() else tc.play()
+        val stateGrid = findViewById<GridLayout>(R.id.state_grid)
+        for (key in listOf("gear", "speed", "wiper", "arrive")) {
+            val v = layoutInflater.inflate(R.layout.item_state, stateGrid, false)
+            stateGrid.addView(v)
+            stateCells[key] = SignalCell(v).also { it.label.text = SIGNALS.getValue(key) }
         }
-        findViewById<View>(R.id.next).setOnClickListener { controller?.transportControls?.skipToNext() }
-        scenarioBtn.setOnClickListener {
-            if (DriveHub.scenario != null) {
-                DriveHub.stopScenario()
-            } else {
-                DriveHub.startScenario()
-                if (!player.isPlaying) controller?.transportControls?.play()
+        val strip = driveStrip as LinearLayout
+        for ((i, key) in listOf("speed", "wiper", "turn", "arrive").withIndex()) {
+            val v = layoutInflater.inflate(R.layout.item_signal, strip, false)
+            v.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                if (i > 0) marginStart = dp(16)
+            }
+            strip.addView(v)
+            stripCells[key] = SignalCell(v).also {
+                it.label.text = SIGNALS.getValue(key)
+                it.value.setTextSize(TypedValue.COMPLEX_UNIT_SP, 34f)
+                it.tag?.visibility = View.GONE
             }
         }
-        todAuto.setOnClickListener { DriveHub.nightOverride = null }
-        todDay.setOnClickListener { DriveHub.nightOverride = false }
-        todNight.setOnClickListener { DriveHub.nightOverride = true }
+        buildReactList()
+        buildPickerCards()
+
+        val togglePlay = View.OnClickListener {
+            val tc = controller?.transportControls ?: return@OnClickListener
+            if (player.isPlaying) tc.pause() else tc.play()
+        }
+        play.setOnClickListener(togglePlay)
+        idlePlay.setOnClickListener(togglePlay)
+        findViewById<View>(R.id.next).setOnClickListener { controller?.transportControls?.skipToNext() }
+        idlePicker.setOnClickListener { openPicker() }
+        findViewById<View>(R.id.live_picker).setOnClickListener { openPicker() }
+        findViewById<View>(R.id.picker_close).setOnClickListener { pickerOpen = false }
+        pickerGo.setOnClickListener {
+            // 재생 중이면 세트만 바꾸고(다음 마디부터), 멈춰 있으면 그 세트로 재생을 시작한다
+            pickedId?.let { controller?.transportControls?.playFromMediaId(it, null) }
+            pickerOpen = false
+        }
+
+        for (id in intArrayOf(R.id.idle_menu, R.id.live_menu)) {
+            val m = ParkedMenu(findViewById(id))
+            menus += m
+            m.scenario.setOnClickListener {
+                if (DriveHub.scenario != null) {
+                    DriveHub.stopScenario()
+                } else {
+                    DriveHub.startScenario()
+                    if (!player.isPlaying) controller?.transportControls?.play()
+                }
+            }
+            m.auto.setOnClickListener { DriveHub.nightOverride = null }
+            m.day.setOnClickListener { DriveHub.nightOverride = false }
+            m.night.setOnClickListener { DriveHub.nightOverride = true }
+        }
 
         browser = MediaBrowserCompat(this, ComponentName(this, DrivescapeService::class.java), object : MediaBrowserCompat.ConnectionCallback() {
             override fun onConnected() {
@@ -167,6 +288,145 @@ class MainActivity : Activity() {
         super.onStop()
     }
 
+    @Deprecated("Activity 기본 뒤로 가기")
+    override fun onBackPressed() {
+        if (pickerOpen) pickerOpen = false else super.onBackPressed()
+    }
+
+    // ---------------- 화면 만들기 ----------------
+
+    private fun dp(v: Int) = (v * resources.displayMetrics.density).roundToInt()
+
+    private fun buildReactList() {
+        val list = findViewById<LinearLayout>(R.id.react_list)
+        for ((icon, title, desc) in REACTIONS) {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, dp(14), 0, 0)
+            }
+            val iv = ImageView(this).apply { setImageResource(icon); importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO }
+            row.addView(iv, LinearLayout.LayoutParams(dp(28), dp(28)))
+            reactIcons += iv
+            row.addView(TextView(this).apply {
+                text = title; setTextColor(cInk); setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f); paint.isFakeBoldText = true
+            }, LinearLayout.LayoutParams(dp(110), ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(14) })
+            row.addView(TextView(this).apply {
+                text = desc; setTextColor(cDim); setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
+            })
+            list.addView(row)
+        }
+    }
+
+    private fun chip(parent: ViewGroup, text: String, fg: Int, bg: Int, sizeSp: Float) {
+        parent.addView(TextView(this).apply {
+            this.text = text
+            setTextColor(fg)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
+            paint.isFakeBoldText = true
+            setBackgroundResource(R.drawable.bg_tag)
+            backgroundTintList = ColorStateList.valueOf(bg)
+            setPadding(dp(14), dp(6), dp(14), dp(6))
+        })
+    }
+
+    private fun buildPickerCards() {
+        val row = findViewById<LinearLayout>(R.id.picker_cards)
+        val entries = DriveHub.sets.map { s ->
+            val t = s.tempo
+            val lo = t.base.roundToInt(); val hi = (t.base + t.maxKmh * t.perKmh).roundToInt()
+            Triple(s.look, "$lo–$hi BPM", s)
+        } + COMING_SOON.map { Triple(it, "추가 예정", null) }
+        for ((i, e) in entries.withIndex()) {
+            val (look, tempo, set) = e
+            val v = layoutInflater.inflate(R.layout.item_set_card, row, false)
+            (v.layoutParams as LinearLayout.LayoutParams).apply { if (i > 0) marginStart = dp(20) }
+            row.addView(v)
+            v.findViewById<ImageView>(R.id.card_cover).apply { clipToOutline = true; setImageResource(Covers.res(this@MainActivity, look.cover)) }
+            v.findViewById<TextView>(R.id.card_title).text = look.title
+            v.findViewById<TextView>(R.id.card_sub).text = look.sub
+            val card = PickerCard(v, set?.id ?: look.cover, look, tempo, set)
+            card.tempoView.text = tempo
+            pickerCards += card
+            if (set != null) {
+                v.setOnClickListener { pickedId = set.id; styledFor = null }
+            } else {
+                v.isClickable = false
+                v.alpha = 0.55f
+            }
+        }
+    }
+
+    private fun openPicker() {
+        if (DriveHub.restricted) return
+        pickedId = DriveHub.currentSet?.id
+        pickerOpen = true
+        styledFor = null
+    }
+
+    /** 세트·주야간이 바뀌었을 때만 색과 커버를 다시 칠한다 */
+    private fun applyLook(set: SoundSet?) {
+        val night = uiNight
+        val key = "${set?.id}/$night/$pickedId/$pickerOpen"
+        if (key == styledFor) return
+        styledFor = key
+        val look = set?.look ?: SoundSet.Look("Drivescape", "")
+        val label = look.label(night)
+        val cover = Covers.res(this, look.cover)
+
+        heroCover.setImageResource(cover)
+        setThumb.setImageResource(cover)
+        heroLabel.setTextColor(label)
+        setText(heroTitle, look.title)
+        setText(heroSub, look.sub)
+        setText(setName, if (look.sub.isEmpty()) look.title else "${look.title} · ${look.sub}")
+        heroChips.removeAllViews()
+        for (c in look.chips) chip(heroChips, c, label, look.tint(night), 19f)
+
+        for (b in listOf(idlePlay, play)) paintPrimary(b, look)
+        scopeAccent = look.accent
+        beats.setTextColor(label)
+        driveCaptionLabel.setTextColor(look.labelNight)
+        for (iv in reactIcons) iv.imageTintList = ColorStateList.valueOf(label)
+
+        // 세트 고르기 카드
+        for (c in pickerCards) {
+            val selected = c.set != null && c.id == pickedId
+            c.root.background = GradientDrawable().apply {
+                setColor(cPanel)
+                cornerRadius = dp(28).toFloat()
+                if (selected) setStroke(dp(4), c.look.accent) else setStroke(dp(1), cLine)
+            }
+            val cl = c.look.label(night)
+            c.tempoView.setTextColor(cl)
+            c.chips.removeAllViews()
+            // 카드에는 템포 줄이 따로 있으므로 BPM 칩은 뺀다
+            for (t in c.look.chips) if (!t.endsWith("BPM")) chip(c.chips, t, cl, c.look.tint(night), 16f)
+            when {
+                c.set == null -> badge(c.badge, "준비 중", cPanel, cInk)
+                selected -> badge(c.badge, "선택됨", c.look.onAccent, c.look.accent)
+                else -> c.badge.visibility = View.GONE
+            }
+        }
+        val picked = pickerCards.firstOrNull { it.id == pickedId }?.look ?: look
+        pickerThumb.setImageResource(Covers.res(this, picked.cover))
+        setText(pickerName, "${picked.title} · ${picked.sub}")
+        paintPrimary(pickerGo, picked)
+    }
+
+    private fun paintPrimary(b: TextView, look: SoundSet.Look) {
+        b.backgroundTintList = ColorStateList.valueOf(look.accent)
+        b.setTextColor(look.onAccent)
+        b.compoundDrawableTintList = ColorStateList.valueOf(look.onAccent)
+    }
+
+    private fun badge(v: TextView, text: String, fg: Int, bg: Int) {
+        v.visibility = View.VISIBLE
+        v.text = text
+        v.setTextColor(fg)
+        v.backgroundTintList = ColorStateList.valueOf(bg)
+    }
+
     // ---------------- 화면 갱신 (프로토타입 frame()) ----------------
 
     private val frame = object : Choreographer.FrameCallback {
@@ -180,6 +440,8 @@ class MainActivity : Activity() {
         val running = player.isPlaying
         val st = DriveHub.current()
         val now = player.playheadFrame()
+        val restricted = DriveHub.restricted
+        if (restricted) pickerOpen = false
 
         player.drainEvents { e ->
             when (e) {
@@ -190,6 +452,48 @@ class MainActivity : Activity() {
                 is UiEvent.Arrive -> arriveUntil = e.t + 2L * SAMPLE_RATE
             }
         }
+
+        val set = DriveHub.currentSet
+        applyLook(set)
+        val sc = DriveHub.scenario
+        val live = running || sc != null
+
+        // 어떤 보기를 보일지
+        pickerView.visibility = if (pickerOpen) View.VISIBLE else View.GONE
+        liveView.visibility = if (!pickerOpen && live) View.VISIBLE else View.GONE
+        idleView.visibility = if (!pickerOpen && !live) View.VISIBLE else View.GONE
+        setChip.visibility = if (!pickerOpen && live) View.VISIBLE else View.GONE
+        setText(statusPill, when {
+            restricted -> "주행 중 · 간단 화면"
+            st.gear == Gear.P -> "정차 중"
+            else -> "주행 중"
+        })
+        setText(mode, if (st.night) "밤 · 단조" else "낮 · 장조")
+
+        val ov = DriveHub.nightOverride
+        for (m in menus) {
+            setText(m.scenario, getString(if (sc != null) R.string.scenario_stop else R.string.scenario_play))
+            m.scenario.isSelected = sc != null
+            m.auto.isSelected = ov == null
+            m.day.isSelected = ov == false
+            m.night.isSelected = ov == true
+        }
+
+        val lampLit = running && now < lampUntil
+        val arriving = running && now < arriveUntil
+        if (idleView.visibility == View.VISIBLE) {
+            idlePicker.visibility = if (restricted) View.GONE else View.VISIBLE
+            idleMenu.visibility = if (restricted) View.GONE else View.VISIBLE
+            val anyLive = listOf(DriveHub.gearStatus, DriveHub.speedStatus, DriveHub.wiperStatus, DriveHub.turnStatus, DriveHub.brakeStatus)
+                .any { it == SignalStatus.LIVE }
+            setText(connText, if (anyLive) "차량 신호 연결됨" else "차량 신호 기다리는 중")
+            connDot.backgroundTintList = ColorStateList.valueOf(if (anyLive) cOk else cDim)
+            for ((k, c) in stateCells) setText(c.value, valueOf(k, st, lampLit, arriving))
+        }
+        if (liveView.visibility == View.VISIBLE) renderLive(st, running, now, restricted, lampLit, arriving)
+    }
+
+    private fun renderLive(st: DriveState, running: Boolean, now: Long, restricted: Boolean, lampLit: Boolean, arriving: Boolean) {
         val base = FloatArray(Layer.entries.size)
         if (running) {
             base[Layer.PAD.ordinal] = 0.7f
@@ -200,65 +504,79 @@ class MainActivity : Activity() {
             if (!running && v < 0.01f) v = 0f
             meters.values[i] = v
         }
-        meters.invalidate()
+        if (!restricted) meters.invalidate()
 
         val set = DriveHub.currentSet
-        setText(setName, set?.name ?: "")
         val bpmVal = set?.let { s ->
             if (st.gear == Gear.P) s.tempo.park else s.tempo.base + st.speed.toDouble().coerceIn(0.0, s.tempo.maxKmh) * s.tempo.perKmh
         } ?: 0.0
         setText(bpm, bpmVal.roundToInt().toString())
         val m = set?.let { if (st.night) it.night else it.day }
         setText(chord, if (running && chordName != null) chordName!! else m?.chords?.firstOrNull() ?: "")
-        setText(mode, if (st.night) "밤 · 단조" else "낮 · 장조")
         setText(beats, (0 until 4).joinToString(" ") { if (running && it == beatOn) "●" else "○" })
 
         setText(play, getString(if (running) R.string.stop else R.string.play))
         scope.running = running
-        scope.color = if (st.brake) cBrake else if (st.wiper > 0) cRain else cAmber
+        scope.color = if (st.brake) cBrake else if (st.wiper > 0) cRain else scopeAccent
         scope.invalidate()
 
         val sc = DriveHub.scenario
-        val arriving = running && now < arriveUntil
         val reaction = reactionText(st, arriving)
         setText(caption, when {
             sc != null -> "시나리오 ${fmt(sc.elapsed)} / ${fmt(Scenario.LENGTH)} · ${sc.caption}"
             running -> reaction
-            else -> "재생을 누르면 지금 주행에 맞춰 음악이 만들어집니다"
+            else -> getString(R.string.idle_hint).substringBefore('\n')
         })
 
-        // 시연 자막: 세트가 바뀌면 3초 동안 세트 이름을 위에 띄운다
+        liveRight.visibility = if (restricted) View.GONE else View.VISIBLE
+        caption.visibility = if (restricted) View.GONE else View.VISIBLE
+        driveCaption.visibility = if (restricted) View.VISIBLE else View.GONE
+        driveStrip.visibility = if (restricted) View.VISIBLE else View.GONE
+        if (restricted) {
+            setText(driveCaptionText, reaction.replace("  ·  ", "\n"))
+            for ((k, c) in stripCells) setText(c.value, valueOf(k, st, lampLit, arriving))
+        }
+
+        // 시연 자막: 세트가 바뀌면 3초 동안 세트 이름을 위에 띄운다 (주행 중엔 큰 자막이 이미 있으므로 숨김)
         val nowMs = android.os.SystemClock.uptimeMillis()
         if (set != null && set.id != lastSetId) {
             if (lastSetId != null) setNoticeUntil = nowMs + 3000
             lastSetId = set.id
         }
-        val showDemo = DriveHub.demoCaptions && running
+        val showDemo = DriveHub.demoCaptions && running && !restricted
         demoOverlay.visibility = if (showDemo) View.VISIBLE else View.GONE
         if (showDemo) {
-            setText(demoTitle, if (nowMs < setNoticeUntil) "세트 → ${set?.name ?: ""}" else "지금 음악이 반응하는 것")
+            setText(demoTitle, if (nowMs < setNoticeUntil) "세트 → ${set?.look?.title ?: ""}" else "지금 음악이 반응하는 것")
             setText(demoCaption, reaction.replace("  ·  ", "\n"))
         }
-        setText(scenarioBtn, getString(if (sc != null) R.string.scenario_stop else R.string.scenario_play))
-        scenarioBtn.isSelected = sc != null
-        val ov = DriveHub.nightOverride
-        todAuto.isSelected = ov == null
-        todDay.isSelected = ov == false
-        todNight.isSelected = ov == true
 
-        updateSignals(st, running && now < lampUntil, running && now < arriveUntil)
+        if (!restricted) updateSignals(st, lampLit, arriving)
+    }
 
-        val restricted = DriveHub.restricted
-        parkedPanel.visibility = if (restricted) View.GONE else View.VISIBLE
-        drivingNotice.visibility = if (restricted) View.VISIBLE else View.GONE
+    /** 신호 칸에 쓰는 값 (세 화면 공통) */
+    private fun valueOf(key: String, st: DriveState, lampLit: Boolean, arriving: Boolean): String = when (key) {
+        "gear" -> if (st.gear == Gear.P) "P 주차" else "D 주행"
+        "speed" -> "${st.speed.roundToInt()} km/h"
+        "wiper" -> arrayOf("끔", "저속", "고속")[st.wiper.coerceIn(0, 2)]
+        "turn" -> when (st.turn) { -1 -> "◀ 왼쪽"; 1 -> "오른쪽 ▶"; else -> "끔" }
+        "brake" -> if (st.brake) "밟음" else "뗌"
+        else -> {
+            val rem = st.remainingMin
+            when {
+                arriving || (rem != null && rem <= 0f) -> "도착"
+                rem != null -> "%.1f분".format(rem)
+                else -> "경로 없음"
+            }
+        }
     }
 
     private fun updateSignals(st: DriveState, lampLit: Boolean, arriving: Boolean) {
-        fun cell(key: String, value: String, status: SignalStatus, active: Int? = null,
+        fun cell(key: String, status: SignalStatus, active: Int? = null,
                  liveLabel: String = "차량 신호", waitLabel: String = "대기") {
             val c = cells.getValue(key)
-            setText(c.value, value)
+            setText(c.value, valueOf(key, st, lampLit, arriving))
             c.value.setTextColor(active ?: cInk)
+            val tag = c.tag ?: return
             val (tagText, tagColor) = when {
                 DriveHub.scenario != null -> "시나리오" to cRain
                 status == SignalStatus.LIVE -> liveLabel to cOk
@@ -266,24 +584,16 @@ class MainActivity : Activity() {
                 status == SignalStatus.UNSUPPORTED -> "미지원" to cDim
                 else -> "권한 없음" to cDim
             }
-            setText(c.tag, tagText)
-            c.tag.setTextColor(tagColor)
+            setText(tag, tagText)
+            tag.setTextColor(tagColor)
         }
-        cell("gear", if (st.gear == Gear.P) "P 주차" else "D 주행", DriveHub.gearStatus,
-            if (st.gear == Gear.D) cAmberText else null)
-        cell("speed", "${st.speed.roundToInt()} km/h", DriveHub.speedStatus)
-        cell("wiper", arrayOf("끔", "저속", "고속")[st.wiper.coerceIn(0, 2)], DriveHub.wiperStatus,
-            if (st.wiper > 0) cRain else null)
-        cell("turn", when (st.turn) { -1 -> "◀ 왼쪽"; 1 -> "오른쪽 ▶"; else -> "끔" }, DriveHub.turnStatus,
-            if (st.turn != 0 && lampLit) cOk else null)
-        cell("brake", if (st.brake) "밟음" else "뗌", DriveHub.brakeStatus, if (st.brake) cBrake else null)
+        cell("gear", DriveHub.gearStatus, if (st.gear == Gear.D) scopeAccent else null)
+        cell("speed", DriveHub.speedStatus)
+        cell("wiper", DriveHub.wiperStatus, if (st.wiper > 0) cRain else null)
+        cell("turn", DriveHub.turnStatus, if (st.turn != 0 && lampLit) cOk else null)
+        cell("brake", DriveHub.brakeStatus, if (st.brake) cBrake else null)
         val rem = st.remainingMin
-        val remText = when {
-            arriving || (rem != null && rem <= 0f) -> "도착"
-            rem != null -> "%.1f분".format(rem)
-            else -> "경로 없음"
-        }
-        cell("arrive", remText, DriveHub.naviStatus,
+        cell("arrive", DriveHub.naviStatus,
             if (rem != null && rem <= 5f) getColor(R.color.arp) else null,
             liveLabel = "내비 연동", waitLabel = "내비")
     }
@@ -325,5 +635,30 @@ class MainActivity : Activity() {
         return "%d:%02d".format(s / 60, s % 60)
     }
 
-    companion object { private const val REQ_PERMS = 1 }
+    companion object {
+        private const val REQ_PERMS = 1
+
+        private val SIGNALS = linkedMapOf(
+            "gear" to "기어", "speed" to "속도", "wiper" to "와이퍼",
+            "turn" to "방향지시등", "brake" to "브레이크", "arrive" to "도착까지"
+        )
+
+        private val REACTIONS = listOf(
+            Triple(R.drawable.ic_r_speed, "속도", "템포와 리듬이 빨라져요"),
+            Triple(R.drawable.ic_r_rain, "와이퍼", "빗소리와 빗방울 음"),
+            Triple(R.drawable.ic_r_turn, "깜빡이", "켠 쪽에서 틱톡"),
+            Triple(R.drawable.ic_r_brake, "브레이크", "소리가 부드럽게 가라앉아요"),
+            Triple(R.drawable.ic_r_flag, "도착", "5분 전부터 고조, 도착하면 차임")
+        )
+
+        /** 기획서의 다음 세트들. 세트 고르기 화면에 "준비 중"으로만 보인다 */
+        private val COMING_SOON = listOf(
+            SoundSet.Look("국악 퓨전", "평조·계면조 5음", "gugak", listOf("5음 음계", "장단"),
+                accent = 0xFF2E9C8A.toInt(), onAccent = 0xFFFFFFFF.toInt(), labelDay = 0xFF1E6F62.toInt(),
+                labelNight = 0xFF5CC2B0.toInt(), tintDay = 0xFFE3F3EF.toInt(), tintNight = 0xFF14302B.toInt()),
+            SoundSet.Look("키즈", "신나는 가족 여행", "kids", listOf("마림바", "벨", "밝은 장조"),
+                accent = 0xFF3A9BE0.toInt(), onAccent = 0xFF0B1A26.toInt(), labelDay = 0xFF1F6FAD.toInt(),
+                labelNight = 0xFF6DB8EE.toInt(), tintDay = 0xFFE4F2FC.toInt(), tintNight = 0xFF132A3C.toInt())
+        )
+    }
 }

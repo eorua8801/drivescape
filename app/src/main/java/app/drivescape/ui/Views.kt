@@ -100,3 +100,55 @@ class MeterView(context: Context, attrs: AttributeSet? = null) : View(context, a
 
     companion object { private const val ROW_DP = 46f }
 }
+
+/** 칩처럼 짧은 항목을 가로로 늘어놓고, 넘치면 다음 줄로 넘긴다. */
+class FlowLayout(context: Context, attrs: AttributeSet? = null) : android.view.ViewGroup(context, attrs) {
+    private val gap = (10 * resources.displayMetrics.density).toInt()
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val maxW = MeasureSpec.getSize(widthMeasureSpec) - paddingLeft - paddingRight
+        var x = 0; var y = 0; var rowH = 0; var usedW = 0
+        for (i in 0 until childCount) {
+            val c = getChildAt(i)
+            if (c.visibility == GONE) continue
+            measureChild(c, widthMeasureSpec, heightMeasureSpec)
+            if (x > 0 && x + c.measuredWidth > maxW) { x = 0; y += rowH + gap; rowH = 0 }
+            x += c.measuredWidth + gap
+            usedW = maxOf(usedW, x - gap)
+            rowH = maxOf(rowH, c.measuredHeight)
+        }
+        val w = if (MeasureSpec.getMode(widthMeasureSpec) == MeasureSpec.EXACTLY) MeasureSpec.getSize(widthMeasureSpec)
+                else usedW + paddingLeft + paddingRight
+        setMeasuredDimension(w, y + rowH + paddingTop + paddingBottom)
+    }
+
+    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+        val maxW = r - l - paddingLeft - paddingRight
+        var x = 0; var y = 0; var rowH = 0
+        for (i in 0 until childCount) {
+            val c = getChildAt(i)
+            if (c.visibility == GONE) continue
+            if (x > 0 && x + c.measuredWidth > maxW) { x = 0; y += rowH + gap; rowH = 0 }
+            c.layout(paddingLeft + x, paddingTop + y, paddingLeft + x + c.measuredWidth, paddingTop + y + c.measuredHeight)
+            x += c.measuredWidth + gap
+            rowH = maxOf(rowH, c.measuredHeight)
+        }
+    }
+}
+
+/** 세트 커버 그림 (drawable `cover_<이름>`, 없으면 기본 세트 커버). */
+object Covers {
+    fun res(context: Context, cover: String): Int {
+        val id = if (cover.isEmpty()) 0 else context.resources.getIdentifier("cover_$cover", "drawable", context.packageName)
+        return if (id != 0) id else R.drawable.cover_ambient
+    }
+
+    /** 미디어 위젯 앨범 그림용 비트맵 */
+    fun bitmap(context: Context, cover: String, px: Int): android.graphics.Bitmap {
+        val d = context.getDrawable(res(context, cover))!!
+        val bmp = android.graphics.Bitmap.createBitmap(px, px, android.graphics.Bitmap.Config.ARGB_8888)
+        d.setBounds(0, 0, px, px)
+        d.draw(Canvas(bmp))
+        return bmp
+    }
+}

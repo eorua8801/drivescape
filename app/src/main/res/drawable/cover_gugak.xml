@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 국악 퓨전 커버(추가 예정 세트): 겹친 산 능선과 붉은 해 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="400dp"
+    android:viewportWidth="400"
+    android:viewportHeight="400">
+    <path android:fillColor="#E6F3EF" android:pathData="M0,0h400v400h-400z" />
+    <path android:fillColor="#D9483B" android:pathData="M252,118 a40,40 0 1,0 80,0 a40,40 0 1,0 -80,0" />
+    <path android:fillColor="#9FD3C6" android:pathData="M0,230 C60,170 100,160 150,210 C190,160 240,120 300,190 C340,160 370,170 400,196 L400,400 L0,400 Z" />
+    <path android:fillColor="#4FB09D" android:pathData="M0,286 C70,236 120,240 170,276 C220,230 290,220 400,270 L400,400 L0,400 Z" />
+    <path android:fillColor="#1E6F62" android:pathData="M0,340 C90,304 170,316 240,336 C300,322 350,318 400,326 L400,400 L0,400 Z" />
+    <path android:strokeColor="#1E6F62" android:strokeWidth="3" android:strokeLineCap="round" android:strokeAlpha="0.6"
+        android:pathData="M40,92 C70,82 96,82 124,92 M64,112 C86,104 108,104 132,112" />
+</vector>

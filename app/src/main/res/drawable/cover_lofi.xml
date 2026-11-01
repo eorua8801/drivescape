@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 로파이 커버: 창가의 LP판과 빗줄기 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="400dp"
+    android:viewportWidth="400"
+    android:viewportHeight="400">
+    <path android:fillColor="#F2E5D2" android:pathData="M0,0h400v400h-400z" />
+    <path android:strokeColor="#8FA58A" android:strokeWidth="4" android:strokeLineCap="round" android:strokeAlpha="0.8"
+        android:pathData="M40,34 L28,70 M86,22 L74,58 M132,40 L120,76 M60,96 L48,132 M108,110 L96,146" />
+    <path android:fillColor="#2B211C" android:pathData="M86,236 a150,150 0 1,0 300,0 a150,150 0 1,0 -300,0" />
+    <path android:strokeColor="#45372E" android:strokeWidth="2"
+        android:pathData="M104,236 a132,132 0 1,0 264,0 a132,132 0 1,0 -264,0 M120,236 a116,116 0 1,0 232,0 a116,116 0 1,0 -232,0 M136,236 a100,100 0 1,0 200,0 a100,100 0 1,0 -200,0 M152,236 a84,84 0 1,0 168,0 a84,84 0 1,0 -168,0" />
+    <path android:strokeColor="#6B5648" android:strokeWidth="5" android:strokeLineCap="round"
+        android:pathData="M150,150 A120,120 0 0,1 236,116" />
+    <path android:fillColor="#C47A4E" android:pathData="M182,236 a54,54 0 1,0 108,0 a54,54 0 1,0 -108,0" />
+    <path android:strokeColor="#F2E5D2" android:strokeWidth="2" android:strokeAlpha="0.5"
+        android:pathData="M196,236 a40,40 0 1,0 80,0 a40,40 0 1,0 -80,0" />
+    <path android:fillColor="#F2E5D2" android:pathData="M229,236 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+</vector>

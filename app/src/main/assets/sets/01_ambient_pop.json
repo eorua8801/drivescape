@@ -2,6 +2,11 @@
   "id": "ambient_pop",
   "name": "기본 · 앰비언트 팝",
   "subtitle": "낮엔 D장조, 밤엔 D에올리안",
+  "look": {
+    "title": "앰비언트 팝", "sub": "기본 · 맑은 날의 드라이브", "cover": "ambient",
+    "chips": ["74–110 BPM", "신스 패드", "7화음", "정박 리듬"],
+    "accent": "#F08A24", "onAccent": "#1C1206", "labelDay": "#A9530C", "labelNight": "#F5A25A", "tintDay": "#FFF1E2", "tintNight": "#3A2614"
+  },
   "modes": {
     "day":   { "scale": [0, 2, 4, 5, 7, 9, 11], "progression": [0, 3, 5, 4], "chords": ["Dmaj7", "Gmaj7", "Bm7", "A7"] },
     "night": { "scale": [0, 2, 3, 5, 7, 8, 10], "progression": [0, 5, 2, 6], "chords": ["Dm7", "B♭maj7", "Fmaj7", "C7"] }

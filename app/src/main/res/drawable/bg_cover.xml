@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 커버 그림 모서리 (ImageView.clipToOutline 과 함께) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@color/chip" />
+    <corners android:radius="24dp" />
+</shape>

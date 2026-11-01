@@ -101,7 +101,8 @@ class SynthEngine(private val stateProvider: () -> DriveState) {
 
     /** 프로토타입 applyControls: 와이퍼·브레이크·시간대·기어가 바뀌면 연속 파라미터 목표값을 옮긴다. */
     private fun applyControls(st: DriveState, force: Boolean = false) {
-        val style = soundSet?.style ?: SoundSet.Style()
+        // 지금 연주 중인 세트의 음색 (새 세트는 다음 마디에 composer로 넘어가면서 같이 바뀐다)
+        val style = (composer.set ?: soundSet)?.style ?: SoundSet.Style()
         val c = Controls(st.wiper, st.brake, st.night, st.gear == Gear.P, style.toneCutoff, style.vinyl, style.wobbleMs, style.outputGain)
         if (!force && c == lastControls) return
         val prev = lastControls
@@ -132,10 +133,11 @@ class SynthEngine(private val stateProvider: () -> DriveState) {
         val st = stateProvider()
         val set = soundSet
         if (running && set != null) {
-            if (composer.set !== set) composer.set = set
             applyControls(st)   // 세트가 바뀌면 음색 한계·잡음·흔들림 목표값도 여기서 옮겨 간다
             val blockEnd = frame + n
             while (nextStep < blockEnd) {
+                // 세트 전환은 마디 첫 박에서: 진행 중인 마디가 끊기지 않게 한다
+                if (composer.set !== set && composer.atBarStart) composer.set = set
                 val sec16 = 60.0 / composer.bpm(st) / 4
                 composer.scheduleStep(max(frame, nextStep.toLong()), sec16, st) { delayTime.setTarget(it, 0.05) }
                 nextStep += sec16 * SR

@@ -17,6 +17,8 @@ class Composer(private val inst: Instruments, private val emit: (UiEvent) -> Uni
     var set: SoundSet? = null
 
     private var step = 0
+    /** 다음에 만들 16분음표가 마디 첫 박인지 (세트는 마디 경계에서만 바꾼다) */
+    val atBarStart get() = step % 16 == 0
     private var barCount = -1
     private var mode: SoundSet.Mode? = null
     private var chordDeg = 0

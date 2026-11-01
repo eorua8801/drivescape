@@ -1,332 +1,714 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  한 화면에 세 가지 보기를 겹쳐 두고 상황에 따라 하나만 보인다 (MainActivity.render).
+  - idle_view: 재생 전 첫 화면 (세트 커버 + 재생, 지금 차 상태, 반응 안내)
+  - live_view: 재생 중. 주행 중(CarUxRestrictions)에는 오른쪽 열을 숨기고 큰 자막·차 상태 4칸만 남긴다
+  - picker_view: 정차 중 세트 고르기
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg"
     android:fitsSystemWindows="true"
-    android:orientation="horizontal"
-    android:padding="24dp">
+    android:orientation="vertical"
+    android:paddingStart="32dp"
+    android:paddingTop="22dp"
+    android:paddingEnd="32dp"
+    android:paddingBottom="24dp">
 
-    <!-- 왼쪽: 지금 흐르는 음악 + 큰 재생 버튼 (주행 중에도 표시) -->
+    <!-- 머리줄: 앱 이름, (재생 중) 지금 세트, 상태 -->
     <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1.25"
-        android:orientation="vertical">
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:minHeight="56dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/app_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textColor="@color/ink"
+            android:textSize="32sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_weight="1"
+            android:text="@string/tagline"
+            android:textColor="@color/ink_dim"
+            android:textSize="19sp" />
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:id="@+id/set_chip"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:background="@drawable/bg_pill"
             android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:paddingStart="6dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="18dp"
+            android:paddingBottom="6dp">
 
-            <TextView
-                android:id="@+id/app_title"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/app_name"
-                android:textColor="@color/ink"
-                android:textSize="30sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_weight="1"
-                android:text="@string/tagline"
-                android:textColor="@color/ink_dim"
-                android:textSize="17sp" />
+            <ImageView
+                android:id="@+id/set_thumb"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_cover"
+                android:importantForAccessibility="no"
+                android:scaleType="centerCrop" />
 
             <TextView
                 android:id="@+id/set_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_chip"
-                android:paddingStart="16dp"
-                android:paddingTop="8dp"
-                android:paddingEnd="16dp"
-                android:paddingBottom="8dp"
-                android:textColor="@color/amber_text"
-                android:textSize="17sp"
+                android:layout_marginStart="12dp"
+                android:textColor="@color/ink"
+                android:textSize="19sp"
                 android:textStyle="bold" />
         </LinearLayout>
-
-        <!-- 지금 연주 중: 템포·코드·박 -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/bg_card"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="28dp"
-            android:paddingTop="14dp"
-            android:paddingEnd="28dp"
-            android:paddingBottom="14dp">
-
-            <TextView
-                android:id="@+id/bpm"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-medium"
-                android:textColor="@color/ink"
-                android:textSize="60sp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="BPM"
-                android:textColor="@color/ink_dim"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <View
-                android:layout_width="1dp"
-                android:layout_height="56dp"
-                android:layout_marginStart="28dp"
-                android:layout_marginEnd="28dp"
-                android:background="@color/line" />
-
-            <TextView
-                android:id="@+id/chord"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/ink"
-                android:textSize="40sp" />
-
-            <TextView
-                android:id="@+id/mode"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="18dp"
-                android:background="@drawable/bg_chip"
-                android:paddingStart="14dp"
-                android:paddingTop="6dp"
-                android:paddingEnd="14dp"
-                android:paddingBottom="6dp"
-                android:textColor="@color/ink_dim"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
-
-            <TextView
-                android:id="@+id/beats"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:letterSpacing="0.2"
-                android:textColor="@color/amber"
-                android:textSize="30sp" />
-        </LinearLayout>
-
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_marginTop="16dp"
-            android:layout_weight="1"
-            android:background="@drawable/bg_card"
-            android:padding="14dp">
-
-            <app.drivescape.ui.ScopeView
-                android:id="@+id/scope"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" />
-
-            <!-- 시연 모드 자막: 지금 음악이 무엇에 반응하는지 크게 보여 준다 (영상 촬영용) -->
-            <LinearLayout
-                android:id="@+id/demo_overlay"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom"
-                android:layout_margin="12dp"
-                android:background="@drawable/bg_caption"
-                android:orientation="vertical"
-                android:paddingStart="28dp"
-                android:paddingTop="16dp"
-                android:paddingEnd="28dp"
-                android:paddingBottom="18dp"
-                android:visibility="gone">
-
-                <TextView
-                    android:id="@+id/demo_title"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/caption_accent"
-                    android:textSize="22sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/demo_caption"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:lineSpacingExtra="4dp"
-                    android:textColor="@color/caption_text"
-                    android:textSize="34sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-        </FrameLayout>
 
         <TextView
-            android:id="@+id/caption"
-            android:layout_width="match_parent"
+            android:id="@+id/status_pill"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:layout_marginStart="6dp"
-            android:maxLines="2"
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_pill"
+            android:paddingStart="18dp"
+            android:paddingTop="10dp"
+            android:paddingEnd="18dp"
+            android:paddingBottom="10dp"
             android:textColor="@color/ink"
-            android:textSize="20sp" />
+            android:textSize="18sp" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
+        <TextView
+            android:id="@+id/mode"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/play"
-                android:layout_width="0dp"
-                android:layout_height="108dp"
-                android:layout_weight="1.5"
-                android:background="@drawable/bg_btn_primary"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center"
-                android:text="@string/play"
-                android:textColor="@color/on_accent"
-                android:textSize="30sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/next"
-                style="@style/Drivescape.Button"
-                android:layout_width="0dp"
-                android:layout_height="108dp"
-                android:layout_marginStart="16dp"
-                android:layout_weight="1"
-                android:text="@string/next_set"
-                android:textSize="26sp" />
-        </LinearLayout>
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_pill"
+            android:paddingStart="18dp"
+            android:paddingTop="10dp"
+            android:paddingEnd="18dp"
+            android:paddingBottom="10dp"
+            android:textColor="@color/ink"
+            android:textSize="18sp" />
     </LinearLayout>
 
-    <!-- 오른쪽: 차량 신호와 레이어 -->
-    <ScrollView
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_marginStart="24dp"
-        android:layout_weight="1"
-        android:scrollbars="none">
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="20dp"
+        android:layout_weight="1">
 
+        <!-- ============ 재생 전 첫 화면 ============ -->
         <LinearLayout
+            android:id="@+id/idle_view"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:layout_height="match_parent"
+            android:orientation="horizontal">
 
-            <TextView
-                style="@style/Drivescape.SectionTitle"
-                android:layout_marginStart="6dp"
-                android:layout_marginTop="8dp"
-                android:text="차량 신호" />
-
-            <GridLayout
-                android:id="@+id/signals"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:columnCount="3" />
-
-            <TextView
-                style="@style/Drivescape.SectionTitle"
-                android:layout_marginStart="6dp"
-                android:layout_marginTop="18dp"
-                android:text="지금 움직이는 소리" />
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="6dp"
-                android:background="@drawable/bg_card"
-                android:paddingStart="20dp"
-                android:paddingTop="10dp"
-                android:paddingEnd="20dp"
-                android:paddingBottom="10dp">
-
-                <app.drivescape.ui.MeterView
-                    android:id="@+id/meters"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
-            </FrameLayout>
-
-            <TextView
-                android:id="@+id/driving_notice"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="6dp"
-                android:background="@drawable/bg_chip"
-                android:gravity="center"
-                android:padding="14dp"
-                android:text="@string/driving_notice"
-                android:textColor="@color/ink_dim"
-                android:textSize="17sp"
-                android:visibility="gone" />
-
-            <!-- 정차 중에만: 데모 시나리오, 시간대 -->
             <LinearLayout
-                android:id="@+id/parked_panel"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    style="@style/Drivescape.SectionTitle"
-                    android:layout_marginStart="6dp"
-                    android:layout_marginTop="18dp"
-                    android:text="@string/parked_only" />
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="48dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/hero_cover"
+                        android:layout_width="460dp"
+                        android:layout_height="460dp"
+                        android:background="@drawable/bg_cover"
+                        android:importantForAccessibility="no"
+                        android:scaleType="fitXY" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="48dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/hero_label"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="지금 세트"
+                            android:textSize="21sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/hero_title"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:textColor="@color/ink"
+                            android:textSize="66sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/hero_sub"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/ink_dim"
+                            android:textSize="28sp" />
+
+                        <app.drivescape.ui.FlowLayout
+                            android:id="@+id/hero_chips"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="22dp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:lineSpacingExtra="6dp"
+                    android:text="@string/idle_hint"
+                    android:textColor="@color/ink_dim"
+                    android:textSize="24sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="26dp"
                     android:orientation="horizontal">
 
                     <TextView
-                        android:id="@+id/scenario"
-                        style="@style/Drivescape.Button"
-                        android:layout_width="0dp"
-                        android:layout_margin="6dp"
-                        android:layout_weight="1.3"
-                        android:text="@string/scenario_play" />
+                        android:id="@+id/idle_play"
+                        android:layout_width="wrap_content"
+                        android:layout_height="104dp"
+                        android:background="@drawable/bg_btn_primary"
+                        android:clickable="true"
+                        android:drawableStart="@drawable/ic_play"
+                        android:drawablePadding="16dp"
+                        android:focusable="true"
+                        android:gravity="center"
+                        android:paddingStart="52dp"
+                        android:paddingEnd="60dp"
+                        android:text="@string/play"
+                        android:textSize="34sp"
+                        android:textStyle="bold" />
 
                     <TextView
-                        android:id="@+id/tod_auto"
+                        android:id="@+id/idle_picker"
                         style="@style/Drivescape.Button"
-                        android:layout_width="0dp"
-                        android:layout_margin="6dp"
-                        android:layout_weight="1"
-                        android:text="자동" />
-
-                    <TextView
-                        android:id="@+id/tod_day"
-                        style="@style/Drivescape.Button"
-                        android:layout_width="0dp"
-                        android:layout_margin="6dp"
-                        android:layout_weight="1"
-                        android:text="낮" />
-
-                    <TextView
-                        android:id="@+id/tod_night"
-                        style="@style/Drivescape.Button"
-                        android:layout_width="0dp"
-                        android:layout_margin="6dp"
-                        android:layout_weight="1"
-                        android:text="밤" />
+                        android:layout_width="wrap_content"
+                        android:layout_height="104dp"
+                        android:layout_marginStart="20dp"
+                        android:drawableStart="@drawable/ic_grid"
+                        android:drawablePadding="14dp"
+                        android:drawableTint="@color/btn_secondary_text"
+                        android:paddingStart="40dp"
+                        android:paddingEnd="44dp"
+                        android:text="@string/pick_set"
+                        android:textSize="28sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="500dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="24dp"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_card"
+                    android:orientation="vertical"
+                    android:paddingStart="30dp"
+                    android:paddingTop="26dp"
+                    android:paddingEnd="30dp"
+                    android:paddingBottom="22dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="지금 차 상태"
+                            android:textColor="@color/ink"
+                            android:textSize="22sp"
+                            android:textStyle="bold" />
+
+                        <View
+                            android:id="@+id/conn_dot"
+                            android:layout_width="10dp"
+                            android:layout_height="10dp"
+                            android:background="@drawable/dot" />
+
+                        <TextView
+                            android:id="@+id/conn_text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:textColor="@color/ink_dim"
+                            android:textSize="17sp" />
+                    </LinearLayout>
+
+                    <GridLayout
+                        android:id="@+id/state_grid"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:columnCount="2" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/react_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_marginTop="20dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_card"
+                    android:orientation="vertical"
+                    android:paddingStart="30dp"
+                    android:paddingTop="26dp"
+                    android:paddingEnd="30dp"
+                    android:paddingBottom="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="6dp"
+                        android:text="이렇게 반응해요"
+                        android:textColor="@color/ink"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <include
+                    android:id="@+id/idle_menu"
+                    layout="@layout/part_parked_menu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp" />
+            </LinearLayout>
         </LinearLayout>
-    </ScrollView>
+
+        <!-- ============ 재생 중 ============ -->
+        <LinearLayout
+            android:id="@+id/live_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1.25"
+                android:orientation="vertical">
+
+                <!-- 지금 연주 중: 템포·코드·박 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_card"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="32dp"
+                    android:paddingTop="14dp"
+                    android:paddingEnd="32dp"
+                    android:paddingBottom="14dp">
+
+                    <TextView
+                        android:id="@+id/bpm"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:textColor="@color/ink"
+                        android:textSize="72sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:text="BPM"
+                        android:textColor="@color/ink_dim"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="60dp"
+                        android:layout_marginStart="32dp"
+                        android:layout_marginEnd="32dp"
+                        android:background="@color/line" />
+
+                    <TextView
+                        android:id="@+id/chord"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/ink"
+                        android:textSize="46sp" />
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1" />
+
+                    <TextView
+                        android:id="@+id/beats"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:letterSpacing="0.2"
+                        android:textSize="32sp" />
+                </LinearLayout>
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_card"
+                    android:padding="16dp">
+
+                    <app.drivescape.ui.ScopeView
+                        android:id="@+id/scope"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
+
+                    <!-- 시연 모드 자막: 지금 음악이 무엇에 반응하는지 크게 보여 준다 (영상 촬영용) -->
+                    <LinearLayout
+                        android:id="@+id/demo_overlay"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="bottom"
+                        android:layout_margin="12dp"
+                        android:background="@drawable/bg_caption"
+                        android:orientation="vertical"
+                        android:paddingStart="28dp"
+                        android:paddingTop="16dp"
+                        android:paddingEnd="28dp"
+                        android:paddingBottom="18dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/demo_title"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/caption_accent"
+                            android:textSize="22sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/demo_caption"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:lineSpacingExtra="4dp"
+                            android:textColor="@color/caption_text"
+                            android:textSize="34sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </FrameLayout>
+
+                <TextView
+                    android:id="@+id/caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:layout_marginTop="14dp"
+                    android:maxLines="2"
+                    android:textColor="@color/ink"
+                    android:textSize="20sp" />
+
+                <!-- 주행 중에만: 큰 반응 자막 + 차 상태 4칸 -->
+                <LinearLayout
+                    android:id="@+id/drive_caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_caption"
+                    android:orientation="vertical"
+                    android:paddingStart="40dp"
+                    android:paddingTop="24dp"
+                    android:paddingEnd="40dp"
+                    android:paddingBottom="26dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/drive_caption_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="지금 음악이 반응하는 것"
+                        android:textColor="@color/caption_accent"
+                        android:textSize="22sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/drive_caption_text"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:lineSpacingExtra="4dp"
+                        android:maxLines="3"
+                        android:textColor="@color/caption_text"
+                        android:textSize="42sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/drive_strip"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/play"
+                        android:layout_width="0dp"
+                        android:layout_height="112dp"
+                        android:layout_weight="1.5"
+                        android:background="@drawable/bg_btn_primary"
+                        android:clickable="true"
+
+                        android:focusable="true"
+                        android:gravity="center"
+                        android:paddingStart="40dp"
+                        android:paddingEnd="40dp"
+                        android:text="@string/stop"
+                        android:textSize="34sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/next"
+                        style="@style/Drivescape.Button"
+                        android:layout_width="0dp"
+                        android:layout_height="112dp"
+                        android:layout_marginStart="16dp"
+                        android:layout_weight="1"
+
+                        android:paddingStart="32dp"
+                        android:paddingEnd="32dp"
+                        android:text="@string/next_set"
+                        android:textSize="30sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 오른쪽: 차량 신호와 레이어 (정차 중에만) -->
+            <ScrollView
+                android:id="@+id/live_right"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="24dp"
+                android:layout_weight="1"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/Drivescape.SectionTitle"
+                        android:layout_marginStart="6dp"
+                        android:text="차량 신호" />
+
+                    <GridLayout
+                        android:id="@+id/signals"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:columnCount="3" />
+
+                    <TextView
+                        style="@style/Drivescape.SectionTitle"
+                        android:layout_marginStart="6dp"
+                        android:layout_marginTop="18dp"
+                        android:text="지금 움직이는 소리" />
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_margin="6dp"
+                        android:background="@drawable/bg_card"
+                        android:paddingStart="22dp"
+                        android:paddingTop="12dp"
+                        android:paddingEnd="22dp"
+                        android:paddingBottom="12dp">
+
+                        <app.drivescape.ui.MeterView
+                            android:id="@+id/meters"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:id="@+id/live_picker"
+                        style="@style/Drivescape.Button"
+                        android:layout_width="match_parent"
+                        android:layout_margin="6dp"
+                        android:layout_marginTop="18dp"
+
+                        android:paddingStart="28dp"
+                        android:paddingEnd="28dp"
+                        android:text="@string/pick_set"
+                        android:textStyle="bold" />
+
+                    <include
+                        android:id="@+id/live_menu"
+                        layout="@layout/part_parked_menu"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp" />
+                </LinearLayout>
+            </ScrollView>
+        </LinearLayout>
+
+        <!-- ============ 세트 고르기 (정차 중) ============ -->
+        <LinearLayout
+            android:id="@+id/picker_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="bottom"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/pick_set"
+                        android:textColor="@color/ink"
+                        android:textSize="44sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/picker_hint"
+                        android:textColor="@color/ink_dim"
+                        android:textSize="22sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/picker_close"
+                    style="@style/Drivescape.Button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="76dp"
+                    android:drawableStart="@drawable/ic_close"
+                    android:drawablePadding="12dp"
+                    android:drawableTint="@color/btn_secondary_text"
+                    android:paddingStart="32dp"
+                    android:paddingEnd="36dp"
+                    android:text="닫기"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/picker_cards"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="24dp"
+                android:layout_weight="1"
+                android:orientation="horizontal" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:background="@drawable/bg_card"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="28dp"
+                android:paddingTop="20dp"
+                android:paddingEnd="24dp"
+                android:paddingBottom="20dp">
+
+                <ImageView
+                    android:id="@+id/picker_thumb"
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
+                    android:background="@drawable/bg_cover"
+                    android:importantForAccessibility="no"
+                    android:scaleType="fitXY" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="20dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="선택한 세트"
+                        android:textColor="@color/ink_dim"
+                        android:textSize="18sp" />
+
+                    <TextView
+                        android:id="@+id/picker_name"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/ink"
+                        android:textSize="28sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/picker_go"
+                    android:layout_width="wrap_content"
+                    android:layout_height="92dp"
+                    android:background="@drawable/bg_btn_primary"
+                    android:clickable="true"
+                    android:drawableStart="@drawable/ic_play"
+                    android:drawablePadding="14dp"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:paddingStart="44dp"
+                    android:paddingEnd="52dp"
+                    android:text="@string/play_this_set"
+                    android:textSize="30sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+    </FrameLayout>
 </LinearLayout>

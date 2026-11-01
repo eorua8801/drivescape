@@ -93,6 +93,7 @@ class DrivescapeService : MediaBrowserServiceCompat() {
                     .setMediaId(s.id)
                     .setTitle(s.name)
                     .setSubtitle(s.subtitle)
+                    .setIconBitmap(coverArt(s))
                     .build(),
                 MediaBrowserCompat.MediaItem.FLAG_PLAYABLE
             )
@@ -109,6 +110,8 @@ class DrivescapeService : MediaBrowserServiceCompat() {
         override fun onSkipToNext() { switchSet(1) }
         override fun onSkipToPrevious() { switchSet(-1) }
         override fun onPlayFromMediaId(mediaId: String?, extras: Bundle?) {
+            // 재생 중이면 세트만 바꾼다 (엔진이 다음 마디부터 새 세트로 연주)
+            if (mediaId != null && player.isPlaying) { selectSet(mediaId); return }
             mediaId?.let { DriveHub.selectSet(it) }
             play()
         }
@@ -206,16 +209,25 @@ class DrivescapeService : MediaBrowserServiceCompat() {
                 .build()
         )
         val set = DriveHub.currentSet
-        session.setMetadata(
-            MediaMetadataCompat.Builder()
-                .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, set?.id ?: "")
-                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, set?.name ?: getString(R.string.app_name))
-                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, getString(R.string.tagline))
-                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, getString(R.string.app_name))
-                .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, set?.name ?: getString(R.string.app_name))
-                .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, getString(R.string.tagline))
-                .build()
-        )
+        val meta = MediaMetadataCompat.Builder()
+            .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, set?.id ?: "")
+            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, set?.name ?: getString(R.string.app_name))
+            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, getString(R.string.tagline))
+            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, getString(R.string.app_name))
+            .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, set?.name ?: getString(R.string.app_name))
+            .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, getString(R.string.tagline))
+        // 미디어 위젯·미디어 센터의 앨범 그림 = 세트 커버
+        coverArt(set)?.let {
+            meta.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, it)
+            meta.putBitmap(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON, it)
+        }
+        session.setMetadata(meta.build())
+    }
+
+    private val covers = HashMap<String, android.graphics.Bitmap>()
+    private fun coverArt(set: app.drivescape.music.SoundSet?): android.graphics.Bitmap? {
+        set ?: return null
+        return covers.getOrPut(set.id) { app.drivescape.ui.Covers.bitmap(this, set.look.cover, 512) }
     }
 
     // ---------------- 포그라운드 알림 ----------------
@@ -228,6 +240,7 @@ class DrivescapeService : MediaBrowserServiceCompat() {
         val n = NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_drivescape)
             .setContentTitle(DriveHub.currentSet?.name ?: getString(R.string.app_name))
+            .setLargeIcon(coverArt(DriveHub.currentSet))
             .setContentText(getString(R.string.tagline))
             .setContentIntent(session.controller.sessionActivity)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

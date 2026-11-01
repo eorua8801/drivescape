@@ -1,6 +1,7 @@
 package app.drivescape.drive
 
 import android.content.Context
+import android.content.SharedPreferences
 import app.drivescape.music.SoundSet
 import java.util.Calendar
 
@@ -41,12 +42,17 @@ object DriveHub {
 
     private var signals: VehicleSignals? = null
     var navi: NaviSignals? = null; private set
+    private var prefs: SharedPreferences? = null
 
     @Synchronized
     fun init(context: Context) {
         if (signals != null) return
         val app = context.applicationContext
         sets = SoundSet.loadAll(app)
+        // 마지막으로 고른 세트로 시작한다
+        prefs = app.getSharedPreferences("drivescape", Context.MODE_PRIVATE).also { p ->
+            p.getString(KEY_SET, null)?.let { id -> sets.indexOfFirst { it.id == id }.takeIf { it >= 0 }?.let { setIndex = it } }
+        }
         signals = VehicleSignals(app).also { it.start() }
         navi = NaviSignals(app).also { it.start() }
     }
@@ -76,14 +82,20 @@ object DriveHub {
     fun nextSet(delta: Int = 1) {
         if (sets.isEmpty()) return
         setIndex = ((setIndex + delta) % sets.size + sets.size) % sets.size
+        rememberSet()
     }
 
     fun selectSet(id: String): Boolean {
         val i = sets.indexOfFirst { it.id == id }
         if (i < 0) return false
         setIndex = i
+        rememberSet()
         return true
     }
+
+    private fun rememberSet() { currentSet?.let { s -> prefs?.edit()?.putString(KEY_SET, s.id)?.apply() } }
+
+    private const val KEY_SET = "last_set"
 
     internal fun update(block: (DriveState) -> DriveState) {
         synchronized(this) { vehicle = block(vehicle) }

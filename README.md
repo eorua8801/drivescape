@@ -21,7 +21,7 @@ Pleos Connect Emulator v2.1.0에서 실제 차량 신호(Virtual Console)와 내
 
 | 파일 | 설명 |
 |---|---|
-| [`apk/Drivescape_Drivescape_release.apk`](apk/Drivescape_Drivescape_release.apk) | release 빌드 (versionName 0.3.1) |
+| [`apk/Drivescape_Drivescape_release.apk`](apk/Drivescape_Drivescape_release.apk) | release 빌드 (versionName 0.4.0) |
 
 > 공모전 시연용으로 release 빌드를 Android 디버그 키로 서명했습니다. 정식 배포 시에는 별도 서명 키로 교체합니다.
 
@@ -52,7 +52,7 @@ powershell -ExecutionPolicy Bypass -File tools/demo_drive.ps1
 ```
 녹화 없이 실행만 하려면 `-NoRecord`를 붙입니다.
 
-앱 안의 **데모 시나리오 재생**(정차 중에만 표시)은 차량 신호 대신 미리 정한 86초 대본으로 음악을 들려줍니다.
+앱 안의 **데모 시나리오**(정차 중에만 표시)은 차량 신호 대신 미리 정한 86초 대본으로 음악을 들려줍니다.
 
 ### 5. 내비 연동 확인 (debug 빌드)
 에뮬레이터에서는 내비 경로를 Pleos 내비 앱에서 직접 설정하거나, debug 빌드의 테스트 훅으로 걸 수 있습니다. 에뮬레이터 차량은 실제로 움직이지 않으므로 도착은 `arrive`로 흉내 냅니다. (이 훅과 경로 설정 권한은 release APK에 포함되지 않습니다.)
@@ -103,9 +103,9 @@ adb shell am broadcast -a app.drivescape.DEBUG_NAVI -n app.drivescape/.debug.Deb
 | 로파이 · 느린 오후 | 66–88 BPM | 스윙, 재즈 9화음, 일렉트릭 피아노, LP 잡음, 따뜻한 테이프 톤 |
 | 시티팝 · 밤의 고속도로 | 96–122 BPM | 네 박 킥, 옥타브 베이스, 뒷박을 끊어 치는 건반, 왕도 진행(낮 Gmaj7–A7–F#m7–Bm7) |
 
-세트는 `app/src/main/assets/sets/*.json` 데이터로 정의합니다(화성·템포·리듬 패턴 + `style`의 음색 설정). 재생 중 **다음 세트** 버튼이나 스티어링 휠 다음 키로 바꿉니다. 빗소리·와이퍼·깜빡이·브레이크 반응은 모든 세트에 공통입니다.
+세트는 `app/src/main/assets/sets/*.json` 데이터로 정의합니다(화성·템포·리듬 패턴 + `style`의 음색 설정 + `look`의 이름·커버·대표색). 정차 중 **세트 고르기** 화면, 재생 중 **다음 세트** 버튼, 스티어링 휠 다음 키로 바꾸며, 새 세트는 다음 마디 첫 박부터 연주됩니다. 마지막에 고른 세트를 기억하고, 세트 커버가 차량 미디어 위젯의 앨범 그림으로 보입니다. 빗소리·와이퍼·깜빡이·브레이크 반응은 모든 세트에 공통입니다.
 
-화면은 차량 주야간 모드에 맞춰 밝은 테마/어두운 테마로 바뀌고, 주행 중(CarUxRestrictions)에는 재생·정지와 세트 넘기기만 남습니다.
+화면은 차량 주야간 모드에 맞춰 밝은 테마/어두운 테마로 바뀌고, 주행 중(CarUxRestrictions)에는 큰 반응 자막, 차 상태 4칸, 재생·정지와 다음 세트 버튼만 남는 간단 화면으로 바뀝니다.
 
 ## 구조
 

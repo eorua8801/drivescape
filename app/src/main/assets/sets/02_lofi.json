@@ -2,6 +2,11 @@
   "id": "lofi",
   "name": "로파이 · 느린 오후",
   "subtitle": "스윙 리듬과 재즈 코드, 따뜻한 테이프 소리",
+  "look": {
+    "title": "로파이", "sub": "느린 오후", "cover": "lofi",
+    "chips": ["66–88 BPM", "스윙", "재즈 9화음", "LP 잡음"],
+    "accent": "#C47A4E", "onAccent": "#1F120A", "labelDay": "#8A4B2A", "labelNight": "#D99A72", "tintDay": "#F7EBDD", "tintNight": "#33241B"
+  },
   "modes": {
     "day":   { "scale": [0, 2, 4, 5, 7, 9, 11], "progression": [1, 4, 0, 5], "chords": ["Em9", "A9", "Dmaj9", "Bm9"] },
     "night": { "scale": [0, 2, 3, 5, 7, 8, 10], "progression": [0, 3, 5, 6], "chords": ["Dm9", "Gm9", "B♭maj9", "C9"] }

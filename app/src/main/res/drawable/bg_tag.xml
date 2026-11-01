@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 세트 칩·배지. 색은 코드에서 backgroundTintList 로 세트 색을 입힌다 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#FFFFFFFF" />
+    <corners android:radius="12dp" />
+</shape>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 시티팝 커버: 줄무늬 노을과 밤 고속도로 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="400dp"
+    android:viewportWidth="400"
+    android:viewportHeight="400">
+    <path android:fillColor="#1B1E4B" android:pathData="M0,0h400v400h-400z" />
+    <path android:fillColor="#FF5DA2" android:pathData="M96,170 a104,104 0 1,0 208,0 a104,104 0 1,0 -208,0" />
+    <path android:fillColor="#1B1E4B" android:pathData="M80,182h240v8h-240z M80,202h240v11h-240z M80,226h240v14h-240z M80,252h240v20h-240z" />
+    <path android:fillColor="#232766" android:pathData="M0,262h400v138h-400z" />
+    <path android:strokeColor="#8B5CF6" android:strokeWidth="2" android:strokeAlpha="0.7"
+        android:pathData="M0,290 H400 M0,326 H400 M0,376 H400 M200,262 L-120,400 M200,262 L520,400 M200,262 L60,400 M200,262 L340,400" />
+    <path android:strokeColor="#FF5DA2" android:strokeWidth="3" android:pathData="M0,262 H400" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="5" android:strokeLineCap="round"
+        android:pathData="M200,286 V300 M200,318 V340 M200,362 V396" />
+</vector>
