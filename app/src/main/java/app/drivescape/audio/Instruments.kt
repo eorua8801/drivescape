@@ -136,11 +136,16 @@ class Instruments(private val engine: SynthEngine) {
 
     fun pluck(t: Long, midi: Int, vel: Double, pan: Double) {
         val s = style
-        engine.add(Voice(t, 0.4,
-            oscs = arrayOf(Osc(wave(s.arpWave), mtof(midi.toDouble()))),
+        val f = mtof(midi.toDouble())
+        // arpBend: 조금 낮은 음에서 밀어 올리며 시작한다 (가야금 줄을 뜯는 느낌)
+        val bent = s.arpBend != 0.0
+        val from = f * 2.0.pow(-s.arpBend / 12.0)
+        engine.add(Voice(t, s.arpDecay + 0.05,
+            oscs = arrayOf(Osc(wave(s.arpWave), if (bent) 1.0 else f)),
+            freq = if (bent) Auto(from).set(0.0, from).exp(0.06, f) else null,
             filter = Biquad(FilterType.LOWPASS, s.arpCutoff, 2.0),
             filterFreq = Auto(s.arpCutoff).set(0.0, s.arpCutoff).exp(0.25, 700.0),
-            gain = env().exp(0.004, 0.06 * vel * s.arpGain).exp(0.35, 1e-4),
+            gain = env().exp(0.004, 0.06 * vel * s.arpGain).exp(s.arpDecay, 1e-4),
             pan = panOf(pan), send = 0.14f, toArpBus = true))
         meter(t, Layer.ARP, vel)
     }

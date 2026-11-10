@@ -28,6 +28,12 @@ class OfflineRenderTest {
     @Test
     fun renderCitypop() = render("03_citypop.json", "drivescape_scenario_citypop.wav")
 
+    @Test
+    fun renderGugak() = render("04_gugak.json", "drivescape_scenario_gugak.wav")
+
+    @Test
+    fun renderKids() = render("05_kids.json", "drivescape_scenario_kids.wav")
+
     private fun render(setFile: String, outName: String) {
         val noteStarts = ArrayList<Pair<Long, Layer>>()
         val set = SoundSet.parse(File("src/main/assets/sets/$setFile").readText())

@@ -7,7 +7,11 @@ import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.content.res.Configuration
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
+import android.graphics.drawable.RippleDrawable
 import android.os.Build
 import android.os.Bundle
 import android.support.v4.media.MediaBrowserCompat
@@ -56,6 +60,7 @@ class MainActivity : Activity() {
 
     // 재생 전 첫 화면
     private lateinit var idleView: View
+    private lateinit var heroCard: View
     private lateinit var heroCover: ImageView
     private lateinit var heroLabel: TextView
     private lateinit var heroTitle: TextView
@@ -73,7 +78,7 @@ class MainActivity : Activity() {
     private lateinit var liveRight: View
     private lateinit var bpm: TextView
     private lateinit var chord: TextView
-    private lateinit var beats: TextView
+    private lateinit var beats: BeatView
     private lateinit var caption: TextView
     private lateinit var driveCaption: View
     private lateinit var driveCaptionLabel: TextView
@@ -122,8 +127,8 @@ class MainActivity : Activity() {
     /** 주행 중 아래 4칸 */
     private val stripCells = LinkedHashMap<String, SignalCell>()
 
-    /** 세트 고르기 카드. [set]이 null이면 아직 만들지 않은 세트(준비 중) */
-    private class PickerCard(val root: View, val id: String, val look: SoundSet.Look, val tempo: String, val set: SoundSet?) {
+    /** 세트 고르기 카드 */
+    private class PickerCard(val root: View, val id: String, val look: SoundSet.Look) {
         val badge: TextView = root.findViewById(R.id.card_badge)
         val tempoView: TextView = root.findViewById(R.id.card_tempo)
         val chips: ViewGroup = root.findViewById(R.id.card_chips)
@@ -141,6 +146,10 @@ class MainActivity : Activity() {
     private val cBrake by lazy { getColor(R.color.brake) }
     private val cPanel by lazy { getColor(R.color.panel) }
     private val cLine by lazy { getColor(R.color.line) }
+    private val cBg by lazy { getColor(R.color.bg) }
+    private val cGlass by lazy { getColor(R.color.glass) }
+    private val cGlassLine by lazy { getColor(R.color.glass_line) }
+    private lateinit var root: View
     private val uiNight get() =
         (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
@@ -148,6 +157,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         DriveHub.init(this)
         setContentView(R.layout.activity_main)
+        root = findViewById(R.id.root)
 
         setChip = findViewById(R.id.set_chip)
         setThumb = findViewById<ImageView>(R.id.set_thumb).also { it.clipToOutline = true }
@@ -156,6 +166,7 @@ class MainActivity : Activity() {
         mode = findViewById(R.id.mode)
 
         idleView = findViewById(R.id.idle_view)
+        heroCard = findViewById(R.id.hero_card)
         heroCover = findViewById<ImageView>(R.id.hero_cover).also { it.clipToOutline = true }
         heroLabel = findViewById(R.id.hero_label)
         heroTitle = findViewById(R.id.hero_title)
@@ -332,28 +343,20 @@ class MainActivity : Activity() {
 
     private fun buildPickerCards() {
         val row = findViewById<LinearLayout>(R.id.picker_cards)
-        val entries = DriveHub.sets.map { s ->
-            val t = s.tempo
-            val lo = t.base.roundToInt(); val hi = (t.base + t.maxKmh * t.perKmh).roundToInt()
-            Triple(s.look, "$lo–$hi BPM", s)
-        } + COMING_SOON.map { Triple(it, "추가 예정", null) }
-        for ((i, e) in entries.withIndex()) {
-            val (look, tempo, set) = e
+        for ((i, set) in DriveHub.sets.withIndex()) {
+            val look = set.look
+            val t = set.tempo
+            val tempo = "${t.base.roundToInt()}–${(t.base + t.maxKmh * t.perKmh).roundToInt()} BPM"
             val v = layoutInflater.inflate(R.layout.item_set_card, row, false)
             (v.layoutParams as LinearLayout.LayoutParams).apply { if (i > 0) marginStart = dp(20) }
             row.addView(v)
             v.findViewById<ImageView>(R.id.card_cover).apply { clipToOutline = true; setImageResource(Covers.res(this@MainActivity, look.cover)) }
             v.findViewById<TextView>(R.id.card_title).text = look.title
             v.findViewById<TextView>(R.id.card_sub).text = look.sub
-            val card = PickerCard(v, set?.id ?: look.cover, look, tempo, set)
+            val card = PickerCard(v, set.id, look)
             card.tempoView.text = tempo
             pickerCards += card
-            if (set != null) {
-                v.setOnClickListener { pickedId = set.id; styledFor = null }
-            } else {
-                v.isClickable = false
-                v.alpha = 0.55f
-            }
+            v.setOnClickListener { pickedId = set.id; styledFor = null }
         }
     }
 
@@ -367,13 +370,22 @@ class MainActivity : Activity() {
     /** 세트·주야간이 바뀌었을 때만 색과 커버를 다시 칠한다 */
     private fun applyLook(set: SoundSet?) {
         val night = uiNight
-        val key = "${set?.id}/$night/$pickedId/$pickerOpen"
+        val restricted = DriveHub.restricted
+        val key = "${set?.id}/$night/$pickedId/$pickerOpen/$restricted"
         if (key == styledFor) return
         styledFor = key
         val look = set?.look ?: SoundSet.Look("Drivescape", "")
         val label = look.label(night)
         val cover = Covers.res(this, look.cover)
 
+        // 첫 화면 큰 카드: 세트 색이 왼쪽 위에서 옅게 번진다
+        // 바탕: 정차 중에는 세트 색이 은은하게 번지고, 주행 중에는 단색 (글자가 또렷하게)
+        root.background = if (restricted) ColorDrawable(cBg) else backdrop(look.accent, night)
+        heroCard.background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
+            intArrayOf(withAlpha(look.tint(night), 0xD0), cGlass, cGlass)).apply {
+            cornerRadius = dp(28).toFloat()
+            setStroke(dp(1), cGlassLine)
+        }
         heroCover.setImageResource(cover)
         setThumb.setImageResource(cover)
         heroLabel.setTextColor(label)
@@ -385,33 +397,51 @@ class MainActivity : Activity() {
 
         for (b in listOf(idlePlay, play)) paintPrimary(b, look)
         scopeAccent = look.accent
-        beats.setTextColor(label)
+        beats.color = look.accent
         driveCaptionLabel.setTextColor(look.labelNight)
         for (iv in reactIcons) iv.imageTintList = ColorStateList.valueOf(label)
 
         // 세트 고르기 카드
         for (c in pickerCards) {
-            val selected = c.set != null && c.id == pickedId
-            c.root.background = GradientDrawable().apply {
-                setColor(cPanel)
+            val selected = c.id == pickedId
+            val tint = c.look.tint(night)
+            val shape = GradientDrawable().apply {
+                setColor(if (selected) tint else cGlass)
                 cornerRadius = dp(28).toFloat()
-                if (selected) setStroke(dp(4), c.look.accent) else setStroke(dp(1), cLine)
+                if (selected) setStroke(dp(4), c.look.accent) else setStroke(dp(1), cGlassLine)
             }
+            c.root.background = RippleDrawable(ColorStateList.valueOf(0x22000000), shape, shape)
             val cl = c.look.label(night)
             c.tempoView.setTextColor(cl)
             c.chips.removeAllViews()
             // 카드에는 템포 줄이 따로 있으므로 BPM 칩은 뺀다
-            for (t in c.look.chips) if (!t.endsWith("BPM")) chip(c.chips, t, cl, c.look.tint(night), 16f)
-            when {
-                c.set == null -> badge(c.badge, "준비 중", cPanel, cInk)
-                selected -> badge(c.badge, "선택됨", c.look.onAccent, c.look.accent)
-                else -> c.badge.visibility = View.GONE
-            }
+            for (t in c.look.chips) if (!t.endsWith("BPM")) chip(c.chips, t, cl, if (selected) cPanel else tint, 16f)
+            if (selected) badge(c.badge, "선택됨", c.look.onAccent, c.look.accent) else c.badge.visibility = View.GONE
         }
         val picked = pickerCards.firstOrNull { it.id == pickedId }?.look ?: look
         pickerThumb.setImageResource(Covers.res(this, picked.cover))
         setText(pickerName, "${picked.title} · ${picked.sub}")
         paintPrimary(pickerGo, picked)
+    }
+
+    private fun withAlpha(color: Int, a: Int) = (color and 0x00FFFFFF) or (a shl 24)
+
+    /**
+     * 유리 카드 뒤에 깔리는 바탕: 단색 위에 세트 색 빛 두 덩이(왼쪽 위, 오른쪽 아래).
+     * 정지된 그림이라 흐림 효과 없이도 반투명 카드에 색이 비쳐 보인다.
+     */
+    private fun backdrop(accent: Int, night: Boolean): Drawable {
+        fun glow(cx: Float, cy: Float, radiusDp: Int, alpha: Int) = GradientDrawable().apply {
+            gradientType = GradientDrawable.RADIAL_GRADIENT
+            setGradientCenter(cx, cy)
+            gradientRadius = dp(radiusDp).toFloat()
+            colors = intArrayOf(withAlpha(accent, alpha), withAlpha(accent, 0))
+        }
+        return LayerDrawable(arrayOf(
+            ColorDrawable(cBg),
+            glow(0.08f, 0.05f, 1300, if (night) 0x50 else 0x40),
+            glow(0.96f, 1.0f, 1000, if (night) 0x34 else 0x28)
+        ))
     }
 
     private fun paintPrimary(b: TextView, look: SoundSet.Look) {
@@ -459,9 +489,9 @@ class MainActivity : Activity() {
         val live = running || sc != null
 
         // 어떤 보기를 보일지
-        pickerView.visibility = if (pickerOpen) View.VISIBLE else View.GONE
-        liveView.visibility = if (!pickerOpen && live) View.VISIBLE else View.GONE
-        idleView.visibility = if (!pickerOpen && !live) View.VISIBLE else View.GONE
+        show(pickerView, pickerOpen)
+        show(liveView, !pickerOpen && live)
+        show(idleView, !pickerOpen && !live)
         setChip.visibility = if (!pickerOpen && live) View.VISIBLE else View.GONE
         setText(statusPill, when {
             restricted -> "주행 중 · 간단 화면"
@@ -493,6 +523,19 @@ class MainActivity : Activity() {
         if (liveView.visibility == View.VISIBLE) renderLive(st, running, now, restricted, lampLit, arriving)
     }
 
+    /** 보기를 바꿀 때 새 화면이 살짝 떠오르며 나타난다 */
+    private fun show(v: View, on: Boolean) {
+        val want = if (on) View.VISIBLE else View.GONE
+        if (v.visibility == want) return
+        v.animate().cancel()
+        v.visibility = want
+        if (on) {
+            v.alpha = 0f
+            v.translationY = dp(14).toFloat()
+            v.animate().alpha(1f).translationY(0f).setDuration(220).start()
+        }
+    }
+
     private fun renderLive(st: DriveState, running: Boolean, now: Long, restricted: Boolean, lampLit: Boolean, arriving: Boolean) {
         val base = FloatArray(Layer.entries.size)
         if (running) {
@@ -513,7 +556,7 @@ class MainActivity : Activity() {
         setText(bpm, bpmVal.roundToInt().toString())
         val m = set?.let { if (st.night) it.night else it.day }
         setText(chord, if (running && chordName != null) chordName!! else m?.chords?.firstOrNull() ?: "")
-        setText(beats, (0 until 4).joinToString(" ") { if (running && it == beatOn) "●" else "○" })
+        beats.beat = if (running) beatOn else -1
 
         setText(play, getString(if (running) R.string.stop else R.string.play))
         scope.running = running
@@ -655,14 +698,5 @@ class MainActivity : Activity() {
             Triple(R.drawable.ic_r_flag, "도착", "5분 전부터 고조, 도착하면 차임")
         )
 
-        /** 기획서의 다음 세트들. 세트 고르기 화면에 "준비 중"으로만 보인다 */
-        private val COMING_SOON = listOf(
-            SoundSet.Look("국악 퓨전", "평조·계면조 5음", "gugak", listOf("5음 음계", "장단"),
-                accent = 0xFF2E9C8A.toInt(), onAccent = 0xFFFFFFFF.toInt(), labelDay = 0xFF1E6F62.toInt(),
-                labelNight = 0xFF5CC2B0.toInt(), tintDay = 0xFFE3F3EF.toInt(), tintNight = 0xFF14302B.toInt()),
-            SoundSet.Look("키즈", "신나는 가족 여행", "kids", listOf("마림바", "벨", "밝은 장조"),
-                accent = 0xFF3A9BE0.toInt(), onAccent = 0xFF0B1A26.toInt(), labelDay = 0xFF1F6FAD.toInt(),
-                labelNight = 0xFF6DB8EE.toInt(), tintDay = 0xFFE4F2FC.toInt(), tintNight = 0xFF132A3C.toInt())
-        )
     }
 }

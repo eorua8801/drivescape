@@ -1,0 +1,38 @@
+{
+  "id": "kids",
+  "name": "키즈 · 신나는 가족 여행",
+  "subtitle": "통통 튀는 마림바와 벨, 밝은 장조",
+  "look": {
+    "title": "키즈", "sub": "신나는 가족 여행", "cover": "kids",
+    "chips": ["100–124 BPM", "마림바", "벨", "밝은 장조"],
+    "accent": "#3A9BE0", "onAccent": "#0B1A26", "labelDay": "#1F6FAD", "labelNight": "#6DB8EE", "tintDay": "#E4F2FC", "tintNight": "#132A3C"
+  },
+  "modes": {
+    "day":   { "scale": [0, 2, 4, 5, 7, 9, 11], "progression": [0, 4, 5, 3], "chords": ["D", "A", "Bm", "G"] },
+    "night": { "scale": [0, 2, 4, 5, 7, 9, 11], "progression": [0, 5, 3, 4], "chords": ["D", "Bm", "G", "A"] }
+  },
+  "tempo": { "park": 76, "base": 100, "perKmh": 0.2, "maxKmh": 120 },
+  "levels": { "slowBelow": 5, "cityBelow": 35, "highwayBelow": 75 },
+  "roots": { "pad": 50, "bass": 38, "arp": 62, "drop": 74 },
+  "patterns": {
+    "bass": { "0": [0], "1": [0, 8], "2": [0, 4, 8, 12], "3": [0, 4, 8, 12, 14] },
+    "kick": { "1": [0, 8], "2": [0, 8], "3": [0, 4, 8, 12] }
+  },
+  "style": {
+    "padStyle": "epiano",
+    "padVoicing": [0, 2, 4],
+    "bed": 0.6,
+    "compSteps": [4, 12, 14],
+    "compLen": 2.0,
+    "compVel": 0.5,
+    "swing": 0.2,
+    "kickFreq": 160, "kickEnd": 62, "kickDecay": 0.22, "kickGain": 0.6,
+    "snareFreq": 2400, "snareGain": 0.5,
+    "hatFreq": 9000, "hatGain": 0.6,
+    "arpWave": "sine", "arpGain": 2.6, "arpCutoff": 5000, "arpDecay": 0.22, "arpFrom": 1,
+    "sparkle": 0.3,
+    "bassCutoff": 800, "bassGain": 0.8,
+    "toneCutoff": 16000,
+    "outputGain": 1.2
+  }
+}

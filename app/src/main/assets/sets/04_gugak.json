@@ -1,0 +1,34 @@
+{
+  "id": "gugak",
+  "name": "국악 퓨전 · 산 너머 가는 길",
+  "subtitle": "낮엔 평조, 밤엔 계면조. 뜯는 현과 북 장단",
+  "look": {
+    "title": "국악 퓨전", "sub": "산 너머 가는 길", "cover": "gugak",
+    "chips": ["72–98 BPM", "평조·계면조 5음", "뜯는 현", "북 장단"],
+    "accent": "#2E9C8A", "onAccent": "#FFFFFF", "labelDay": "#1E6F62", "labelNight": "#5CC2B0", "tintDay": "#E3F3EF", "tintNight": "#14302B"
+  },
+  "modes": {
+    "day":   { "scale": [0, 2, 5, 7, 9],  "progression": [0, 2, 1, 3], "chords": ["Dsus4", "G", "Esus4", "Asus4"] },
+    "night": { "scale": [0, 3, 5, 7, 10], "progression": [0, 4, 1, 3], "chords": ["Dsus4", "Csus4", "F", "Dm/A"] }
+  },
+  "tempo": { "park": 56, "base": 72, "perKmh": 0.22, "maxKmh": 120 },
+  "levels": { "slowBelow": 5, "cityBelow": 35, "highwayBelow": 75 },
+  "roots": { "pad": 50, "bass": 38, "arp": 62, "drop": 74 },
+  "patterns": {
+    "bass": { "0": [0], "1": [0, 8], "2": [0, 6, 8], "3": [0, 6, 8, 11, 14] },
+    "kick": { "1": [0, 8], "2": [0, 6, 8], "3": [0, 6, 8, 11] }
+  },
+  "style": {
+    "padStyle": "saw",
+    "padVoicing": [0, 2, 3],
+    "padGain": 1.6,
+    "swing": 0.33,
+    "kickFreq": 115, "kickEnd": 58, "kickDecay": 0.5, "kickGain": 0.65,
+    "snareFreq": 2800, "snareGain": 0.55,
+    "hatFreq": 9000, "hatGain": 0.45,
+    "arpWave": "triangle", "arpGain": 2.4, "arpCutoff": 3200, "arpDecay": 0.7, "arpBend": 0.6, "arpFrom": 1,
+    "bassCutoff": 520, "bassGain": 0.6,
+    "toneCutoff": 12000,
+    "outputGain": 1.15
+  }
+}

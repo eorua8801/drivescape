@@ -5,6 +5,8 @@
     <color name="panel">#171C23</color>
     <color name="chip">#212833</color>
     <color name="line">#2A313C</color>
+    <color name="glass">#B3171C23</color>
+    <color name="glass_line">#26FFFFFF</color>
     <color name="ink">#E8EDF3</color>
     <color name="ink_dim">#8B96A5</color>
 

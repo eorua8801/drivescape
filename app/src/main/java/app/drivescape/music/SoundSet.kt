@@ -88,6 +88,14 @@ class SoundSet(
         val arpWave: String = "square",
         val arpGain: Double = 1.0,
         val arpCutoff: Double = 3800.0,
+        /** 아르페지오 한 음이 사라지는 시간(초). 짧으면 마림바, 길면 가야금처럼 울린다 */
+        val arpDecay: Double = 0.35,
+        /** 아르페지오 음을 이만큼(반음) 아래에서 밀어 올리며 시작 (0 = 없음). 가야금 줄을 뜯는 느낌 */
+        val arpBend: Double = 0.0,
+        /** 아르페지오가 나오기 시작하는 리듬 단계 (1 = 저속부터, 2 = 시내부터) */
+        val arpFrom: Int = 2,
+        /** 주행 중 2·4박에 높은 벨이 울릴 확률 (0 = 없음) */
+        val sparkle: Double = 0.0,
         val bassCutoff: Double = 700.0,
         val bassGain: Double = 1.0,
         /** LP 레코드 잡음(0~1) */
@@ -180,6 +188,8 @@ class SoundSet(
                 snareFreq = num("snareFreq", d.snareFreq), snareGain = num("snareGain", d.snareGain),
                 hatFreq = num("hatFreq", d.hatFreq), hatGain = num("hatGain", d.hatGain),
                 arpWave = str("arpWave", d.arpWave), arpGain = num("arpGain", d.arpGain), arpCutoff = num("arpCutoff", d.arpCutoff),
+                arpDecay = num("arpDecay", d.arpDecay), arpBend = num("arpBend", d.arpBend),
+                arpFrom = if (j.has("arpFrom")) j.getInt("arpFrom") else d.arpFrom, sparkle = num("sparkle", d.sparkle),
                 bassCutoff = num("bassCutoff", d.bassCutoff), bassGain = num("bassGain", d.bassGain),
                 vinyl = num("vinyl", d.vinyl), toneCutoff = num("toneCutoff", d.toneCutoff), wobbleMs = num("wobbleMs", d.wobbleMs),
                 outputGain = num("outputGain", d.outputGain)

@@ -5,6 +5,9 @@
     <color name="panel">#FFFFFF</color>
     <color name="chip">#EEF0F3</color>
     <color name="line">#E1E4E8</color>
+    <!-- 유리 카드: 바탕의 세트 색이 살짝 비치는 반투명 흰색 + 밝은 테두리 -->
+    <color name="glass">#B8FFFFFF</color>
+    <color name="glass_line">#E6FFFFFF</color>
     <color name="ink">#16191E</color>
     <color name="ink_dim">#6A7380</color>
 

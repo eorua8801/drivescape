@@ -22,6 +22,9 @@ class ScopeView(context: Context, attrs: AttributeSet? = null) : View(context, a
         style = Paint.Style.STROKE; strokeWidth = 3f * d; strokeJoin = Paint.Join.ROUND; strokeCap = Paint.Cap.ROUND
     }
     private val path = Path()
+    private val fillPath = Path()
+    private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private var fillKey = 0L
     private val buf = FloatArray(2048)
 
     override fun onDraw(canvas: Canvas) {
@@ -43,10 +46,50 @@ class ScopeView(context: Context, attrs: AttributeSet? = null) : View(context, a
                 val y = h / 2 - buf[start + i] * h * 0.85f
                 if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
             }
+            // 파형 아래를 같은 색으로 옅게 채운다 (아래로 갈수록 투명)
+            val key = (color.toLong() shl 32) or height.toLong()
+            if (key != fillKey) {
+                fillKey = key
+                val rgb = color and 0x00FFFFFF
+                fill.shader = android.graphics.LinearGradient(0f, 0f, 0f, h, rgb or 0x40000000, rgb,
+                    android.graphics.Shader.TileMode.CLAMP)
+            }
+            fillPath.set(path); fillPath.lineTo(w, h); fillPath.lineTo(0f, h); fillPath.close()
+            canvas.drawPath(fillPath, fill)
         } else {
             path.moveTo(0f, h / 2); path.lineTo(w, h / 2)
         }
         canvas.drawPath(path, wave)
+    }
+}
+
+/** 한 마디 네 박을 점 네 개로 보여 준다. 지금 박은 세트 색으로 채우고 조금 크게 그린다. */
+class BeatView(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
+    /** 지금 박 (0~3), 멈춰 있으면 -1 */
+    var beat = -1
+        set(v) { if (field != v) { field = v; invalidate() } }
+    var color: Int = context.getColor(R.color.amber)
+        set(v) { if (field != v) { field = v; invalidate() } }
+
+    private val d = resources.displayMetrics.density
+    private val on = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val off = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = context.getColor(R.color.line) }
+
+    override fun onDraw(canvas: Canvas) {
+        val step = width / 4f
+        val cy = height / 2f
+        for (i in 0 until 4) {
+            val cx = step * (i + 0.5f)
+            if (i == beat) {
+                on.color = color
+                on.alpha = 50
+                canvas.drawCircle(cx, cy, 17 * d, on)
+                on.alpha = 255
+                canvas.drawCircle(cx, cy, 11 * d, on)
+            } else {
+                canvas.drawCircle(cx, cy, (if (i == 0) 9 else 7) * d, off)
+            }
+        }
     }
 }
 

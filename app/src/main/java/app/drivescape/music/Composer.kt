@@ -159,7 +159,7 @@ class Composer(private val inst: Instruments, private val emit: (UiEvent) -> Uni
         }
 
         var rate = 0
-        if (lv >= 2) rate = 1
+        if (lv >= style.arpFrom) rate = 1
         if (lv == 3) rate = 2
         if (b > 0) rate = max(rate, if (b >= 0.75) 3 else 2)
         if (st.brake) rate = min(rate, 1)
@@ -173,6 +173,11 @@ class Composer(private val inst: Instruments, private val emit: (UiEvent) -> Uni
         if (lv == -1 && (s16 == 0 || s16 == 8) && rnd.next() < 0.4) {
             val tones = arpTones(chordDeg, st)
             inst.bell(t, tones[floor(rnd.next() * tones.size).toInt()], 0.55, rnd.next() * 1.2 - 0.6, 3.2)
+        }
+        // 세트가 켠 경우에만: 주행 중 2·4박에 가끔 높은 벨 (기존 세트는 난수 순서가 그대로)
+        if (style.sparkle > 0 && lv >= 1 && !st.brake && (s16 == 4 || s16 == 12) && rnd.next() < style.sparkle) {
+            val tones = arpTones(chordDeg, st)
+            inst.bell(t, tones[floor(rnd.next() * tones.size).toInt()], 0.4, rnd.next() * 1.2 - 0.6, 1.6)
         }
         if (st.wiper > 0 && rnd.next() < (if (st.wiper == 1) 0.16 else 0.32)) {
             val at = inst.offset(t, rnd.next() * sec16 * 0.6)
